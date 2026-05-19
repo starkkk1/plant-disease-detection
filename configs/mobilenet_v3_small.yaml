@@ -1,0 +1,3 @@
+defaults: configs/default.yaml
+model:
+  name: mobilenet_v3_small

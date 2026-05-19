@@ -1,0 +1,38 @@
+project:
+  name: lightweight-plant-disease
+  seed: 42
+  task: tomato_leaf_disease_classification
+
+data:
+  raw_root: data/raw/plant-disease-dataset
+  processed_root: data/processed/tomato
+  train_dir: data/processed/tomato/train
+  val_dir: data/processed/tomato/val
+  test_dir: data/processed/tomato/test
+  class_map: data/processed/tomato/class_to_idx.json
+  image_size: 224
+  batch_size: 32
+  num_workers: 4
+
+model:
+  name: resnet50
+  num_classes: 10
+  pretrained: true
+
+training:
+  epochs: 30
+  head_epochs: 5
+  lr: 1.0e-4
+  fine_tune_lr: 1.0e-5
+  optimizer: adam
+  scheduler: reduce_on_plateau
+  scheduler_factor: 0.5
+  scheduler_patience: 3
+  early_stopping_patience: 5
+  monitor_metric: val_f1_macro
+  use_class_weights: true
+
+output:
+  checkpoint_dir: checkpoints
+  results_dir: results
+  reports_dir: reports

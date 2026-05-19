@@ -1,0 +1,3 @@
+defaults: configs/default.yaml
+model:
+  name: efficientnet_b0
