@@ -87,6 +87,8 @@ class TestDatasetPipeline(unittest.TestCase):
                 img.save(os.path.join(class_raw_dir, f"img_{i}.jpg"))
                 
     def tearDown(self):
+        import logging
+        logging.shutdown()
         shutil.rmtree(self.test_dir)
         
     def test_prepare_dataset_force_split(self):
