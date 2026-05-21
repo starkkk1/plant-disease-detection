@@ -32,7 +32,25 @@ training:
   monitor_metric: val_f1_macro
   use_class_weights: true
 
+augmentation:
+  train:
+    random_horizontal_flip: true
+    rotation_degrees: 15
+    color_jitter_brightness: 0.2
+    color_jitter_contrast: 0.2
+    random_resized_crop: true
+    crop_scale_min: 0.8
+    crop_scale_max: 1.0
+  val_test:
+    resize: 256
+    center_crop: 224
+
+normalization:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
 output:
   checkpoint_dir: checkpoints
   results_dir: results
   reports_dir: reports
+  log_dir: results/logs
