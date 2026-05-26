@@ -4,12 +4,12 @@ project:
   task: tomato_leaf_disease_classification
 
 data:
-  raw_root: data/raw/plant-disease-dataset
-  processed_root: data/processed/tomato
-  train_dir: data/processed/tomato/train
-  val_dir: data/processed/tomato/val
-  test_dir: data/processed/tomato/test
-  class_map: data/processed/tomato/class_to_idx.json
+  raw_root: D:\Code\python\PlantVillage-Dataset
+  processed_root: D:\Code\python\data
+  train_dir: D:\Code\python\data\train
+  val_dir: D:\Code\python\data\val
+  test_dir: D:\Code\python\data\test
+  class_map: D:\Code\python\data\class_to_idx.json
   image_size: 224
   batch_size: 32
   num_workers: 4

@@ -6,16 +6,11 @@ import shutil
 OD_DIR = r"D:\Code\python\Tomato-Village\Variant-c(Object Detection)"
 OUTPUT_DIR = r"D:\Code\python\data\processed_custom\test-multileaves"
 
-# Class Mapping from Varient-C Labels.txt
+# Class Mapping from Varient-C Labels.txt (Filtered to 3 main classes)
 class_mapping = {
     0: "Tomato___Early_blight",
     1: "Tomato___healthy",
-    2: "Tomato___Late_blight",
-    3: "Tomato___Leaf_Miner",
-    4: "Tomato___Magnesium_Deficiency",
-    5: "Tomato___Nitrogen_Deficiency",
-    6: "Tomato___Pottassium_Deficiency",
-    7: "Tomato___Spotted_Wilt_Virus"
+    2: "Tomato___Late_blight"
 }
 
 def extract_crops_from_split(split_name):
