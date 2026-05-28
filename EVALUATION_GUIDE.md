@@ -1,77 +1,99 @@
 # Evaluation Guide
 
-This project must evaluate each model using the same protocol.
+This project evaluates models using the same protocol for fair comparison.
 
-## 1. Primary Metric
+## Primary Metric
 
 Primary metric:
 
-```txt
+```text
 Macro F1-score
 ```
 
 Reason:
 
-- The tomato dataset may be imbalanced.
-- Accuracy can hide poor performance on minority disease classes.
+- tomato disease classes may be imbalanced,
+- accuracy can hide poor performance on minority classes.
 
-## 2. Required Classification Metrics
-
-For every model, report:
-
-- Accuracy
-- Macro precision
-- Macro recall
-- Macro F1-score
-- Per-class precision
-- Per-class recall
-- Per-class F1-score
-- Confusion matrix
-
-## 3. Required Efficiency Metrics
+## Required Classification Metrics
 
 For every model, report:
 
-- Number of parameters
-- Model checkpoint size in MB
-- Average CPU inference time per image
-- Average GPU inference time per image if GPU is available
+- accuracy,
+- macro precision,
+- macro recall,
+- macro F1-score,
+- per-class precision,
+- per-class recall,
+- per-class F1-score,
+- confusion matrix.
+
+## Required Efficiency Metrics
+
+For every model, report:
+
+- number of parameters,
+- FLOPs/MACs,
+- checkpoint size in MB,
+- average CPU inference time per image,
+- average GPU inference time per image if GPU is available,
+- throughput images/second.
 
 Inference time should be averaged over at least 100 test images.
 
-## 4. Required Output Files
+## Required Robustness Metrics
 
-```txt
+For every model and corruption type, report:
+
+- clean accuracy,
+- corrupted accuracy,
+- clean macro F1,
+- corrupted macro F1,
+- absolute drop,
+- relative drop percentage.
+
+## Required Output Files
+
+```text
 results/experiments.csv
 results/model_comparison.csv
+results/robustness_comparison.csv
 results/confusion_matrices/<model_name>_cm.png
 results/classification_reports/<model_name>_report.csv
 ```
 
-## 5. Experiments CSV Columns
+## Experiments CSV Columns
 
 ```csv
-run_id,model,date,epochs_run,best_val_f1,test_accuracy,test_precision_macro,test_recall_macro,test_f1_macro,num_params,model_size_mb,inference_time_ms_cpu,inference_time_ms_gpu,notes
+run_id,model,date,epochs_run,best_val_f1,test_accuracy,test_precision_macro,test_recall_macro,test_f1_macro,num_params,flops_macs,model_size_mb,inference_time_ms_cpu,inference_time_ms_gpu,throughput_img_per_sec,notes
 ```
 
-## 6. Final Model Selection
+## Robustness CSV Columns
 
-The final recommended model should not be selected by accuracy alone.
+```csv
+model,corruption_type,clean_accuracy,corrupted_accuracy,clean_f1_macro,corrupted_f1_macro,absolute_drop,relative_drop_percent
+```
 
-Use this decision logic:
+## Final Model Selection Logic
+
+Do not select the final recommended model by accuracy alone.
+
+Use this logic:
 
 1. Remove models with weak macro F1.
-2. Compare model size and inference speed.
-3. Check Grad-CAM quality on correct and wrong predictions.
-4. Choose the best accuracy-efficiency-interpretability trade-off.
+2. Compare model size and inference latency.
+3. Compare robustness drop.
+4. Check Grad-CAM quality on clean and corrupted samples.
+5. Choose the best accuracy-efficiency-robustness-explainability trade-off.
 
-## 7. Paper Discussion Questions
+## Discussion Questions
 
-Use evaluation results to answer:
+Use results to answer:
 
-- Which model is most accurate?
+- Which model is most accurate on clean data?
 - Which model is fastest?
 - Which model is smallest?
-- Which model has the best macro F1?
-- Does a smaller model lose too much accuracy?
+- Which model is most robust under corrupted images?
+- Which corruption hurts performance the most?
 - Does the best accuracy model also provide better Grad-CAM explanations?
+- Is MobileViT-XS worth the extra complexity compared with CNN-only lightweight models?

@@ -1,27 +1,28 @@
 # Implementation Order
 
-Codex should implement the project in this exact order.
+Codex must implement the project in this exact order. Do not skip steps.
 
-## Step 1: Repository Skeleton
+## Step 1 — Repository Skeleton
 
-Create:
+Create or verify:
 
-- folders from `PROJECT_STRUCTURE.md`
-- `.gitignore`
-- `requirements.txt`
-- config YAML files
+- folders from `PROJECT_STRUCTURE.md`,
+- `.gitignore`,
+- `requirements.txt`,
+- YAML config files,
+- placeholder `.gitkeep` files when needed.
 
 Do not implement models yet.
 
-## Step 2: Dataset Preparation
+## Step 2 — Dataset Preparation
 
 Implement:
 
-- `scripts/prepare_dataset.py`
-- `src/data/dataset.py`
-- `src/data/transforms.py`
+- `scripts/prepare_dataset.py`,
+- `src/data/dataset.py`,
+- `src/data/transforms.py`.
 
-Success check:
+Main command:
 
 ```bash
 python scripts/prepare_dataset.py --filter-tomato --stats
@@ -29,79 +30,150 @@ python scripts/prepare_dataset.py --filter-tomato --stats
 
 Expected outputs:
 
-- `data/processed/tomato/train`
-- `data/processed/tomato/val`
-- `data/processed/tomato/test`
-- `data/processed/tomato/class_to_idx.json`
-- `reports/dataset_summary.md`
+```text
+data/processed/tomato/train
+data/processed/tomato/val
+data/processed/tomato/test
+data/processed/tomato/class_to_idx.json
+reports/dataset_summary.md
+```
 
-## Step 3: Model Factory
+Success checks:
 
-Implement:
+- exactly 10 tomato classes,
+- no non-tomato classes,
+- `valid` is mapped to `val`,
+- dataset summary exists.
 
-- `src/models/model_factory.py`
-
-Success check:
-
-- Each of 4 models can be instantiated with `num_classes=10`.
-- Forward pass works with dummy tensor `(2, 3, 224, 224)`.
-
-## Step 4: Training Pipeline
+## Step 3 — Corrupted Test Set Generation
 
 Implement:
 
-- `src/training/trainer.py`
-- `src/training/losses.py`
-- `scripts/train_model.py`
+- `scripts/generate_corrupted_test.py`,
+- optional helper functions in `src/data/corruptions.py`.
+
+Command:
+
+```bash
+python scripts/generate_corrupted_test.py --config configs/default.yaml
+```
+
+Expected output:
+
+```text
+data/processed/tomato_corrupted/
+```
+
+Do not use corrupted images for training.
+
+## Step 4 — Model Factory
+
+Implement:
+
+- `src/models/model_factory.py`.
+
+Required models:
+
+- resnet50,
+- efficientnet_b0,
+- mobilenet_v2,
+- mobilenet_v3_small.
+
+Optional:
+
+- mobilevit_xs.
 
 Success check:
+
+- each model can be instantiated with `num_classes=10`,
+- forward pass works with dummy tensor `(2, 3, 224, 224)`.
+
+## Step 5 — Training Pipeline
+
+Implement:
+
+- `src/training/trainer.py`,
+- `src/training/losses.py`,
+- `scripts/train_model.py`.
+
+Command example:
 
 ```bash
 python scripts/train_model.py --config configs/mobilenet_v3_small.yaml
 ```
 
-## Step 5: Evaluation Pipeline
+Success checks:
+
+- checkpoint saved,
+- training curve saved,
+- validation macro F1 logged.
+
+## Step 6 — Evaluation Pipeline
 
 Implement:
 
-- `src/evaluation/metrics.py`
-- `src/evaluation/evaluate.py`
-- `src/evaluation/inference_speed.py`
-- `scripts/evaluate_model.py`
+- `src/evaluation/metrics.py`,
+- `src/evaluation/evaluate.py`,
+- `src/evaluation/inference_speed.py`,
+- `scripts/evaluate_model.py`.
 
-Success check:
+Outputs:
 
-- Metrics saved to `results/experiments.csv`.
-- Confusion matrix saved.
+- `results/experiments.csv`,
+- `results/classification_reports/`,
+- `results/confusion_matrices/`.
 
-## Step 6: Grad-CAM Pipeline
-
-Implement:
-
-- `src/explainability/gradcam.py`
-- `src/explainability/visualize.py`
-- `scripts/generate_gradcam.py`
-
-Success check:
-
-- Overlay images saved to `results/gradcam/<model_name>/`.
-
-## Step 7: Run All Experiments
+## Step 7 — Robustness Evaluation
 
 Implement:
 
-- `scripts/run_all_experiments.py`
+- `scripts/evaluate_robustness.py`.
 
-Success check:
+Output:
 
-- All 4 models can be trained/evaluated using their configs.
-- `results/model_comparison.csv` exists.
+```text
+results/robustness_comparison.csv
+```
 
-## Step 8: Paper Outputs
+Success checks:
+
+- each model evaluated on clean test,
+- each model evaluated on corrupted test,
+- robustness drop calculated.
+
+## Step 8 — Grad-CAM Pipeline
+
+Implement:
+
+- `src/explainability/gradcam.py`,
+- `src/explainability/visualize.py`,
+- `scripts/generate_gradcam.py`.
+
+Outputs:
+
+```text
+results/gradcam/<model_name>/correct/
+results/gradcam/<model_name>/wrong/
+results/gradcam/<model_name>/clean_vs_corrupted/
+results/gradcam/<model_name>/cross_model/
+reports/gradcam_analysis.md
+```
+
+## Step 9 — Run All Experiments
+
+Implement:
+
+- `scripts/run_all_experiments.py`.
+
+Do not include MobileViT-XS in automatic run until the four required models are complete.
+
+## Step 10 — Paper Outputs
 
 Generate:
 
-- tables for paper
-- figures for paper
-- `reports/experiment_notes.md`
-- `reports/gradcam_analysis.md`
+- `results/model_comparison.csv`,
+- `results/robustness_comparison.csv`,
+- paper-ready tables,
+- paper-ready figures,
+- `reports/experiment_notes.md`,
+- `reports/gradcam_analysis.md`.

@@ -1,113 +1,50 @@
 # Data Validation Checklist
 
-Use this checklist immediately after downloading the Kaggle dataset.
+Use this checklist before training any model.
 
-## 1. Confirm Download
+## Raw Dataset Checks
 
-Expected command:
+- [ ] Kaggle dataset downloaded successfully.
+- [ ] ZIP extracted into `data/raw/`.
+- [ ] Exact extracted folder name identified.
+- [ ] Raw folder has train/valid/test or equivalent structure.
+- [ ] Tomato folders exist.
 
-```bash
-kaggle datasets download -d rashidthihan/plant-disease-dataset
-unzip plant-disease-dataset.zip -d data/raw/
-```
+## Tomato Filtering Checks
 
-## 2. Inspect Top-Level Folder
+- [ ] Only folders starting with `Tomato___` are copied.
+- [ ] Non-tomato classes are excluded.
+- [ ] Exactly 10 tomato classes are found.
+- [ ] `valid/` is mapped to `val/`.
 
-Run:
+## Processed Dataset Checks
 
-```bash
-find data/raw -maxdepth 3 -type d | head -50
-```
+- [ ] `data/processed/tomato/train/` exists.
+- [ ] `data/processed/tomato/val/` exists.
+- [ ] `data/processed/tomato/test/` exists.
+- [ ] Each split has the same class folders.
+- [ ] `class_to_idx.json` exists.
+- [ ] `reports/dataset_summary.md` exists.
 
-Check whether the top-level folder is:
+## Class Count Checks
 
-```txt
-data/raw/plant-disease-dataset/
-```
+- [ ] Number of images per class is reported.
+- [ ] Minority classes are identified.
+- [ ] Class imbalance is documented.
+- [ ] Decision on class weights is documented.
 
-If not, update:
+## Corrupted Test Checks
 
-```txt
-configs/default.yaml -> data.raw_root
-```
+- [ ] Clean test set exists first.
+- [ ] Corrupted test set generated from clean test only.
+- [ ] Corrupted test set preserves class folder structure.
+- [ ] Corrupted images are not used in training.
+- [ ] Corruption types are documented.
 
-## 3. Confirm Split Names
+## Dataloader Checks
 
-Expected raw split names:
-
-```txt
-train/
-valid/
-test/
-```
-
-The processed project standard is:
-
-```txt
-train/
-val/
-test/
-```
-
-So `prepare_dataset.py` must map:
-
-```txt
-valid -> val
-```
-
-## 4. Confirm Tomato Classes
-
-Expected 10 total classes:
-
-```txt
-Tomato___Bacterial_spot
-Tomato___Early_blight
-Tomato___Late_blight
-Tomato___Leaf_Mold
-Tomato___Septoria_leaf_spot
-Tomato___Spider_mites
-Tomato___Target_Spot
-Tomato___Tomato_Yellow_Leaf_Curl_Virus
-Tomato___Tomato_mosaic_virus
-Tomato___healthy
-```
-
-## 5. Count Images
-
-After filtering tomato classes, generate:
-
-```txt
-reports/dataset_summary.md
-```
-
-It must include:
-
-| Class | Train | Val | Test | Total |
-|---|---:|---:|---:|---:|
-
-## 6. Sanity Check Samples
-
-For each class:
-
-- Show 5 images.
-- Confirm images are tomato leaves.
-- Confirm no corrupted image files.
-- Confirm labels match folder names.
-
-## 7. Class Imbalance
-
-Check whether some classes are much smaller.
-
-If imbalance exists:
-
-- Use macro F1 as primary metric.
-- Use class weights in CrossEntropyLoss.
-- Report class distribution in the paper.
-
-## 8. Leakage Check
-
-Make sure:
-
-- No image exists in more than one split.
-- Raw and processed folders are not mixed in training.
-- Validation/test images are never augmented.
+- [ ] Train dataloader returns `(B, 3, 224, 224)`.
+- [ ] Validation dataloader returns `(B, 3, 224, 224)`.
+- [ ] Test dataloader returns `(B, 3, 224, 224)`.
+- [ ] Labels are in correct range `0..9`.
+- [ ] Class names display correctly from `class_to_idx.json`.

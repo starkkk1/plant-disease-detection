@@ -1,150 +1,167 @@
 # Dataset Guide
 
----
-
 ## Source
 
-**Kaggle:** https://www.kaggle.com/datasets/rashidthihan/plant-disease-dataset
+Primary dataset:
 
-Download command (requires Kaggle API key configured):
+- Kaggle Plant Disease Dataset by rashidthihan
+- Use tomato subset only.
+
+Download command:
 
 ```bash
 kaggle datasets download -d rashidthihan/plant-disease-dataset
 unzip plant-disease-dataset.zip -d data/raw/
-# After extraction, inspect the exact top-level folder name.
-# If it is not data/raw/plant-disease-dataset/, update configs/default.yaml accordingly.
 ```
 
----
+After extraction, inspect the exact top-level folder name. It may not be exactly `data/raw/plant-disease-dataset/`.
 
-## Expected Raw Structure After Download
+## Goal
 
-The dataset is expected to be pre-split, but the exact extracted top-level folder name may differ depending on Kaggle packaging. After extraction, verify it matches:
+Create this processed dataset:
 
-```
-data/raw/plant-disease-dataset/
-├── train/
-│   ├── Tomato___Bacterial_spot/
-│   ├── Tomato___Early_blight/
-│   ├── Tomato___Late_blight/
-│   ├── Tomato___Leaf_Mold/
-│   ├── Tomato___Septoria_leaf_spot/
-│   ├── Tomato___Spider_mites/
-│   ├── Tomato___Target_Spot/
-│   ├── Tomato___Tomato_Yellow_Leaf_Curl_Virus/
-│   ├── Tomato___Tomato_mosaic_virus/
-│   ├── Tomato___healthy/
-│   └── [other plant classes — ignored]
-├── valid/
-│   └── [same structure]
-└── test/
-    └── [same structure]
-```
-
-> If the dataset is NOT pre-split (all images in one folder), run:
-> `python scripts/prepare_dataset.py --split`
-> This will create the train/valid/test split automatically using 70/15/15 ratio.
-
----
-
-## Tomato Filter Step
-
-The dataset contains images from many plant types (Apple, Corn, Grape, etc.). This project uses **Tomato only**.
-
-The `scripts/prepare_dataset.py` script will:
-
-1. Scan all class folders in `data/raw/`.
-2. Keep only folders that start with `Tomato___`.
-3. Copy them to `data/processed/tomato/train/`, `val/`, `test/`.
-
-The raw dataset may use `valid/`, while this project standardizes the processed folder name to `val/`.
-
-After this step, all downstream code reads from `data/processed/tomato/` only.
-
----
-
-## Processed Structure (Used by All Code)
-
-```
+```text
 data/processed/tomato/
 ├── train/
-│   ├── Tomato___Bacterial_spot/        (~2000 images)
-│   ├── Tomato___Early_blight/          (~1000 images)
-│   ├── Tomato___Late_blight/           (~1900 images)
-│   ├── Tomato___Leaf_Mold/             (~950 images)
-│   ├── Tomato___Septoria_leaf_spot/    (~1770 images)
-│   ├── Tomato___Spider_mites/          (~1670 images)
-│   ├── Tomato___Target_Spot/           (~1400 images)
-│   ├── Tomato___Tomato_Yellow_Leaf_Curl_Virus/ (~5350 images)
-│   ├── Tomato___Tomato_mosaic_virus/   (~370 images)
-│   └── Tomato___healthy/              (~1590 images)
 ├── val/
-│   └── [same 10 folders, fewer images]
-└── test/
-    └── [same 10 folders, fewer images]
+├── test/
+└── class_to_idx.json
 ```
 
-> Image counts above are approximate. Run `scripts/prepare_dataset.py --stats` to get exact counts and save to `reports/dataset_summary.md`.
+All training, evaluation, Grad-CAM, and robustness scripts must read from `data/processed/tomato/`.
 
----
+## Expected Raw Structure
+
+The dataset may be pre-split:
+
+```text
+data/raw/<extracted-folder>/
+├── train/
+├── valid/
+└── test/
+```
+
+The raw folder may contain many plant species. Keep only class folders starting with:
+
+```text
+Tomato___
+```
+
+Expected tomato classes:
+
+```text
+Tomato___Bacterial_spot
+Tomato___Early_blight
+Tomato___Late_blight
+Tomato___Leaf_Mold
+Tomato___Septoria_leaf_spot
+Tomato___Spider_mites
+Tomato___Target_Spot
+Tomato___Tomato_Yellow_Leaf_Curl_Virus
+Tomato___Tomato_mosaic_virus
+Tomato___healthy
+```
+
+## Mapping `valid` to `val`
+
+The raw dataset may use:
+
+```text
+valid/
+```
+
+This project standardizes it to:
+
+```text
+val/
+```
+
+Therefore:
+
+- raw `train/` -> processed `train/`
+- raw `valid/` -> processed `val/`
+- raw `test/` -> processed `test/`
+
+## Dataset Preparation Script
+
+Implement:
+
+```bash
+python scripts/prepare_dataset.py --filter-tomato --stats
+```
+
+Expected outputs:
+
+```text
+data/processed/tomato/train/
+data/processed/tomato/val/
+data/processed/tomato/test/
+data/processed/tomato/class_to_idx.json
+reports/dataset_summary.md
+```
+
+## Dataset Summary
+
+`reports/dataset_summary.md` must include:
+
+- dataset source,
+- raw folder path,
+- processed folder path,
+- number of classes,
+- class names,
+- train/val/test image counts per class,
+- total images,
+- class imbalance notes,
+- corrupted test set generation status.
 
 ## Class Index Mapping
 
-The class index is determined alphabetically by `torchvision.datasets.ImageFolder`. The mapping will be auto-generated and saved to `data/processed/tomato/class_to_idx.json` during dataset preparation.
+Use `torchvision.datasets.ImageFolder` to determine class indices.
 
-Approximate mapping:
+Save the mapping to:
 
-```
-0: Tomato___Bacterial_spot
-1: Tomato___Early_blight
-2: Tomato___Late_blight
-3: Tomato___Leaf_Mold
-4: Tomato___Septoria_leaf_spot
-5: Tomato___Spider_mites
-6: Tomato___Target_Spot
-7: Tomato___Tomato_Yellow_Leaf_Curl_Virus
-8: Tomato___Tomato_mosaic_virus
-9: Tomato___healthy
+```text
+data/processed/tomato/class_to_idx.json
 ```
 
-> Always load `class_to_idx.json` for display labels. Never hardcode class indices in evaluation or Grad-CAM code.
+Never hardcode class indices in evaluation or Grad-CAM scripts.
 
----
+## Class Imbalance
 
-## Class Imbalance Check
+After filtering, check image count per class.
 
-Run after preparation:
+Expected issue:
 
-```bash
-python scripts/prepare_dataset.py --stats
+- some disease classes may have fewer images than others.
+
+Decision:
+
+- compute class weights from the training split,
+- use weighted CrossEntropyLoss,
+- report macro metrics and per-class F1.
+
+## Corrupted Test Set
+
+Generate a corrupted/noisy test set from the clean test set:
+
+```text
+data/processed/tomato_corrupted/
+├── brightness/
+├── contrast/
+├── gaussian_noise/
+├── blur/
+├── jpeg/
+└── shadow/
 ```
 
-Expected imbalance: `Tomato___Tomato_mosaic_virus` has significantly fewer images than `Tomato___Tomato_Yellow_Leaf_Curl_Virus`.
+Each corruption folder should preserve the same class folder structure as the clean test set.
 
-Decision: Use `class_weights` in CrossEntropyLoss. This is computed automatically in `src/training/trainer.py`.
+The corrupted test set must not be used for training.
 
----
+## What Not To Do
 
-## Data Path Configuration
-
-All code reads the dataset path from `configs/default.yaml`:
-
-```yaml
-data:
-  root: data/processed/tomato
-  train_dir: data/processed/tomato/train
-  val_dir: data/processed/tomato/val
-  test_dir: data/processed/tomato/test
-  class_map: data/processed/tomato/class_to_idx.json
-```
-
-**Never hardcode paths in `src/` or `notebooks/`.**
-
----
-
-## What NOT to Do
-
-- Do not use images from non-Tomato classes.
-- Do not mix raw and processed data paths.
-- Do not re-split the data if it is already pre-split by the dataset source.
-- Do not apply augmentation to `val/` or `test/` folders.
+- Do not train on non-tomato classes.
+- Do not mix raw and processed paths.
+- Do not re-split data if the Kaggle dataset already has train/valid/test.
+- Do not apply random augmentation to validation or clean test folders.
+- Do not include corrupted test images in training.

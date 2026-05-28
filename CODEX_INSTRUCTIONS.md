@@ -1,94 +1,141 @@
 # Codex Instructions
 
-This file defines strict rules for any AI assistant (Codex, Copilot, ChatGPT, Claude) working on this project. Read this file before generating any code.
+This file defines strict rules for any AI assistant working on this project. Read this file before generating code.
 
----
+## Project Identity
 
-## Identity of This Project
+This is a Research-Based Learning project in deep learning.
 
-This is a **Research-Based Learning (RBL)** project in deep learning.
-
-- Task: image classification (not detection, not segmentation)
-- Subject: tomato leaf disease
-- Dataset: Kaggle Plant Disease Dataset by rashidthihan (tomato subset only)
-- Models: ResNet50, EfficientNet-B0, MobileNetV2, MobileNetV3-Small
-- Explainability: Grad-CAM only
-- Framework: PyTorch
-
----
+- Task: image classification only.
+- Subject: tomato leaf disease.
+- Dataset: Kaggle Plant Disease Dataset by rashidthihan, tomato subset only.
+- Main models: ResNet50, EfficientNet-B0, MobileNetV2, MobileNetV3-Small.
+- Optional exploratory model: MobileViT-XS, only if time and hardware allow.
+- Explainability: Grad-CAM.
+- Framework: PyTorch.
+- Additional evaluation: clean test vs corrupted/noisy test.
 
 ## Non-Negotiable Rules
 
-### Rule 1 — Do not change the dataset
-- Only use the Kaggle dataset specified in `README.md`.
-- Do not switch to ImageNet, CIFAR, or any other dataset.
-- Do not download or suggest a different dataset.
+### Rule 1 — Do not change the task type
 
-### Rule 2 — Do not change the model list
-- Only use: ResNet50, EfficientNet-B0, MobileNetV2, MobileNetV3-Small.
-- Optional extras (DenseNet121, MobileViT) require explicit human approval.
-- Do not suggest Vision Transformers, YOLO, or segmentation models.
+This is image classification only.
 
-### Rule 3 — Do not change the framework
-- Use PyTorch only.
-- Do not rewrite code in TensorFlow or Keras.
+Do not add:
 
-### Rule 4 — Do not change the task type
-- This is image classification only.
-- Do not add object detection heads.
-- Do not add segmentation masks.
-- Do not add LLM or NLP components.
+- object detection,
+- YOLO,
+- bounding boxes,
+- semantic segmentation,
+- treatment recommendation,
+- LLM/RAG/NLP.
 
-### Rule 5 — Do not hardcode paths
-- All paths must come from `configs/default.yaml` or `src/utils/paths.py`.
-- Never hardcode `/home/user/...` or `C:\Users\...` inside source code.
+### Rule 2 — Do not change the dataset scope
 
-### Rule 6 — Do not mix train/val/test augmentation
-- Data augmentation is applied to training split only.
-- Validation and test use only resize + normalize.
+Use only the tomato subset from the specified Kaggle Plant Disease Dataset.
 
-### Rule 7 — Always set random seed
-- Use `SEED = 42` everywhere.
-- Call `src/utils/seed.py → set_seed(42)` at the start of every training script.
+Do not use non-tomato classes for model training.
 
-### Rule 8 — Save all results to the correct folder
-- Metrics → `results/experiments.csv`
-- Confusion matrices → `results/confusion_matrices/`
-- Training curves → `results/training_curves/`
-- Grad-CAM images → `results/gradcam/`
-- Checkpoints → `checkpoints/<model_name>/best.pth`
+Optional external datasets can be mentioned only in reports/future work unless the user explicitly approves.
+
+### Rule 3 — Keep model list controlled
+
+Required models:
+
+- ResNet50,
+- EfficientNet-B0,
+- MobileNetV2,
+- MobileNetV3-Small.
+
+Optional exploratory model:
+
+- MobileViT-XS.
+
+Do not add extra models without explicit approval.
+
+### Rule 4 — Use PyTorch only
+
+Do not rewrite the project in TensorFlow/Keras.
+
+### Rule 5 — No hardcoded paths
+
+All paths must come from:
+
+- `configs/default.yaml`, or
+- `src/utils/paths.py`.
+
+Never hardcode local absolute paths such as `/home/...` or `C:\Users\...`.
+
+### Rule 6 — Augmentation split rule
+
+Training split:
+
+- data augmentation allowed.
+
+Validation/test split:
+
+- resize + normalize only.
+- no random augmentation.
+
+Corrupted test set:
+
+- generated from clean test images.
+- used only for robustness evaluation.
+- never used for training.
+
+### Rule 7 — Always set seed
+
+Use `SEED = 42` and call `set_seed(42)` at the start of training/evaluation scripts.
+
+### Rule 8 — Save outputs consistently
+
+Save outputs to the correct folders:
+
+- metrics: `results/experiments.csv`,
+- model comparison: `results/model_comparison.csv`,
+- clean vs corrupted comparison: `results/robustness_comparison.csv`,
+- confusion matrices: `results/confusion_matrices/`,
+- training curves: `results/training_curves/`,
+- Grad-CAM: `results/gradcam/`,
+- checkpoints: `checkpoints/<model_name>/best.pth`.
 
 ### Rule 9 — One model, one config
-- Each model has its own config file in `configs/`.
-- The training script reads from config. It does not take inline hyperparameters.
+
+Each model has its own YAML config file.
+
+The training script reads from config. It must not take inline hyperparameters except for the config path.
 
 ### Rule 10 — Do not over-engineer
-- No distributed training setup unless explicitly requested.
-- No custom CUDA kernels.
-- No reinforcement learning or meta-learning.
-- Keep each function under 50 lines when possible.
 
----
+Do not add:
 
-## When You Are Unsure
+- distributed training,
+- Docker,
+- MLflow,
+- complicated backend APIs,
+- mobile application code,
+- database/authentication,
+- custom CUDA kernels.
 
-If a requested task is ambiguous or seems to conflict with these rules:
+The priority is research correctness and reproducibility.
 
-1. Do not guess and implement.
-2. State the conflict clearly.
-3. Ask for clarification before writing code.
+## Required Reading Before Code
 
----
+| Module | Read First |
+|---|---|
+| Dataset preparation | `DATASET_GUIDE.md`, `DATA_VALIDATION_CHECKLIST.md` |
+| Configs | `CONFIG_GUIDE.md` |
+| Model setup | `EXPERIMENT_PLAN.md` |
+| Training | `EXPERIMENT_PLAN.md`, `IMPLEMENTATION_ORDER.md` |
+| Evaluation | `EVALUATION_GUIDE.md` |
+| Robustness | `ROBUSTNESS_GUIDE.md`, `DATASET_GUIDE.md` |
+| Grad-CAM | `GRADCAM_GUIDE.md` |
+| Project structure | `PROJECT_STRUCTURE.md` |
 
-## File You Must Read Before Writing Code
+## When Unsure
 
-Before generating any code for a module, read the corresponding file:
+If a requested task conflicts with these rules:
 
-| Module              | Read First                     |
-|---------------------|--------------------------------|
-| Dataset loading     | `DATASET_GUIDE.md`             |
-| Model setup         | `EXPERIMENT_PLAN.md`           |
-| Training loop       | `configs/default.yaml`         |
-| Grad-CAM            | `EXPERIMENT_PLAN.md` and `GRADCAM_GUIDE.md` |
-| Evaluation          | `EXPERIMENT_PLAN.md` and `EVALUATION_GUIDE.md` |
-| Paths               | `PROJECT_STRUCTURE.md` and `CONFIG_GUIDE.md` |
+1. Stop.
+2. Explain the conflict.
+3. Ask for confirmation before coding.
