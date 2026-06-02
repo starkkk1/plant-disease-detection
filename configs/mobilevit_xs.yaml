@@ -1,0 +1,3 @@
+defaults: configs/default.yaml
+model:
+  name: mobilevit_xs
