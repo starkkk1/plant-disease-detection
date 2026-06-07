@@ -4,12 +4,15 @@ project:
   task: tomato_leaf_disease_classification
 
 data:
-  raw_root: D:\Code\python\PlantVillage-Dataset
-  processed_root: D:\Code\python\data
-  train_dir: D:\Code\python\data\train
-  val_dir: D:\Code\python\data\val
-  test_dir: D:\Code\python\data\test
-  class_map: D:\Code\python\data\class_to_idx.json
+  raw_root: D:\Code\python\data+source\PlantVillage-Dataset\raw\color
+  processed_root: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full
+  train_dir: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\train
+  val_dir: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\val
+  test_dir: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\eval\three_class_external
+  class_map: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\metadata\class_to_idx.json
+  eval_three_class_dir: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\eval\three_class_external
+  eval_bangladesh_dir: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\eval\bangladesh_binary
+  eval_multileaf_dir: D:\Code\python\plant-disease-detection\data\plantvillage_tomato_full\eval\multileaf_late_blight
   image_size: 224
   batch_size: 32
   num_workers: 4
