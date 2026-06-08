@@ -9,7 +9,9 @@ from PIL import Image
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PV_COLOR_DIR = PROJECT_ROOT.parent / "data+source" / "PlantVillage-Dataset" / "raw" / "color"
+DEFAULT_PV_COLOR_DIR = PROJECT_ROOT.parent / "plantvillage dataset" / "color"
+DEFAULT_PV_GRAY_DIR = PROJECT_ROOT.parent / "plantvillage dataset" / "grayscale"
+DEFAULT_PV_SEGMENTED_DIR = PROJECT_ROOT.parent / "plantvillage dataset" / "segmented"
 DEFAULT_EXISTING_THREE_CLASS_TEST = PROJECT_ROOT / "data" / "processed_custom" / "test"
 DEFAULT_BANGLADESH_ROOT = PROJECT_ROOT.parent / "data+source" / "Tomato_Leaves"
 DEFAULT_MULTILEAF_ROOT = PROJECT_ROOT.parent / "data+source" / "Tomato-Village" / "Variant-c(Object Detection)"
@@ -35,6 +37,8 @@ def parse_args() -> argparse.Namespace:
         description="Prepare the full PlantVillage tomato dataset and register external evaluation sets."
     )
     parser.add_argument("--pv-color-dir", type=Path, default=DEFAULT_PV_COLOR_DIR)
+    parser.add_argument("--pv-gray-dir", type=Path, default=DEFAULT_PV_GRAY_DIR)
+    parser.add_argument("--pv-segmented-dir", type=Path, default=DEFAULT_PV_SEGMENTED_DIR)
     parser.add_argument("--existing-three-class-test", type=Path, default=DEFAULT_EXISTING_THREE_CLASS_TEST)
     parser.add_argument("--bangladesh-root", type=Path, default=DEFAULT_BANGLADESH_ROOT)
     parser.add_argument("--multileaf-root", type=Path, default=DEFAULT_MULTILEAF_ROOT)
@@ -65,7 +69,8 @@ def normalized_class_name(source_name: str) -> str:
 
 def safe_copy(src: Path, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dest)
+    if not dest.exists():
+        shutil.copy2(src, dest)
 
 
 def make_unique_name(prefix: str, original_name: str, seen_names: set[str]) -> str:
@@ -86,7 +91,7 @@ def make_unique_name(prefix: str, original_name: str, seen_names: set[str]) -> s
 
 
 def prepare_plantvillage_train_val(
-    pv_color_dir: Path, output_root: Path, train_ratio: float, seed: int
+    pv_color_dir: Path, pv_gray_dir: Path, pv_segmented_dir: Path, output_root: Path, train_ratio: float, seed: int
 ) -> tuple[dict[str, dict[str, int]], list[str]]:
     stats: dict[str, dict[str, int]] = {"train": {}, "val": {}}
     class_names: list[str] = []
@@ -118,11 +123,39 @@ def prepare_plantvillage_train_val(
             ("val", val_images, val_root),
         ):
             class_dest = split_root / class_name
+            class_dest_gray = output_root / f"{split_name}_gray" / class_name
+            class_dest_segmented = output_root / f"{split_name}_segmented" / class_name
+
             class_dest.mkdir(parents=True, exist_ok=True)
+            class_dest_gray.mkdir(parents=True, exist_ok=True)
+            class_dest_segmented.mkdir(parents=True, exist_ok=True)
+
             copied = 0
             for src_path in split_images:
                 dest_name = make_unique_name("pv", src_path.name, seen_names)
                 safe_copy(src_path, class_dest / dest_name)
+
+                if pv_gray_dir.exists():
+                    gray_src = pv_gray_dir / class_dir.name / src_path.name
+                    if gray_src.exists():
+                        safe_copy(gray_src, class_dest_gray / dest_name)
+
+                if pv_segmented_dir.exists():
+                    segmented_src = None
+                    for ext in [".jpg", ".JPG", ".jpeg", ".png", src_path.suffix]:
+                        cand = pv_segmented_dir / class_dir.name / f"{src_path.stem}_final_masked{ext}"
+                        if cand.exists():
+                            segmented_src = cand
+                            break
+                    if segmented_src is None:
+                        cand = pv_segmented_dir / class_dir.name / src_path.name
+                        if cand.exists():
+                            segmented_src = cand
+                    
+                    if segmented_src:
+                        segmented_dest_name = Path(dest_name).with_suffix(segmented_src.suffix).name
+                        safe_copy(segmented_src, class_dest_segmented / segmented_dest_name)
+
                 copied += 1
             stats[split_name][class_name] = copied
 
@@ -305,10 +338,12 @@ def main() -> None:
     if not args.pv_color_dir.exists():
         raise FileNotFoundError(f"PlantVillage color directory not found: {args.pv_color_dir}")
 
-    ensure_clean_dir(args.output_root)
+    args.output_root.mkdir(parents=True, exist_ok=True)
 
     split_stats, class_names = prepare_plantvillage_train_val(
         pv_color_dir=args.pv_color_dir,
+        pv_gray_dir=args.pv_gray_dir,
+        pv_segmented_dir=args.pv_segmented_dir,
         output_root=args.output_root,
         train_ratio=args.train_ratio,
         seed=args.seed,
