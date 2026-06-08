@@ -315,6 +315,8 @@ def write_metadata(
     summary = {
         "sources": {
             "plantvillage_color_dir": str(args.pv_color_dir),
+            "plantvillage_gray_dir": str(args.pv_gray_dir),
+            "plantvillage_segmented_dir": str(args.pv_segmented_dir),
             "existing_three_class_test": str(args.existing_three_class_test),
             "bangladesh_root": str(args.bangladesh_root),
             "multileaf_root": str(args.multileaf_root),
