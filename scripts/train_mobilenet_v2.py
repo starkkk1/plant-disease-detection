@@ -190,15 +190,50 @@ def main():
     test_loss, test_acc, test_f1, test_prec, test_rec = validate(model, test_loader, criterion, device)
     logger.info(f"Test - Loss: {test_loss:.4f}, Acc: {test_acc:.4f}, F1: {test_f1:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}")
     
-    # Save final metrics
+    import torchvision.transforms as transforms
+    from torchvision.datasets import ImageFolder
+    from torch.utils.data import DataLoader
+
+    test_transform = transforms.Compose([
+        transforms.Resize(256),
+        transforms.CenterCrop(224),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    ])
+
+    tv_dir = os.path.join(base_dir, 'data', 'new_processed', 'eval', 'Tomato-Village')
+    tl_dir = os.path.join(base_dir, 'data', 'new_processed', 'eval', 'Tomato_Leaves')
+
     final_metrics = {
         'test_loss': test_loss,
         'test_accuracy': test_acc,
         'test_f1': test_f1,
         'test_precision': test_prec,
         'test_recall': test_rec,
-        'history': history
+        'history': history,
+        'eval_tomato_village': {},
+        'eval_tomato_leaves': {}
     }
+
+    if os.path.exists(tv_dir):
+        tv_dataset = ImageFolder(tv_dir, transform=test_transform)
+        tv_loader = DataLoader(tv_dataset, batch_size=config.get('data', {}).get('batch_size', 32), shuffle=False)
+        tv_loss, tv_acc, tv_f1, tv_prec, tv_rec = validate(model, tv_loader, criterion, device)
+        logger.info(f"Tomato-Village Eval - Loss: {tv_loss:.4f}, Acc: {tv_acc:.4f}, F1: {tv_f1:.4f}, Precision: {tv_prec:.4f}, Recall: {tv_rec:.4f}")
+        final_metrics['eval_tomato_village'] = {
+            'loss': tv_loss, 'accuracy': tv_acc, 'f1': tv_f1, 'precision': tv_prec, 'recall': tv_rec
+        }
+
+    if os.path.exists(tl_dir):
+        tl_dataset = ImageFolder(tl_dir, transform=test_transform)
+        tl_loader = DataLoader(tl_dataset, batch_size=config.get('data', {}).get('batch_size', 32), shuffle=False)
+        tl_loss, tl_acc, tl_f1, tl_prec, tl_rec = validate(model, tl_loader, criterion, device)
+        logger.info(f"Tomato_Leaves Eval - Loss: {tl_loss:.4f}, Acc: {tl_acc:.4f}, F1: {tl_f1:.4f}, Precision: {tl_prec:.4f}, Recall: {tl_rec:.4f}")
+        final_metrics['eval_tomato_leaves'] = {
+            'loss': tl_loss, 'accuracy': tl_acc, 'f1': tl_f1, 'precision': tl_prec, 'recall': tl_rec
+        }
+
+    # Save final metrics
     with open(metrics_file, 'w') as f:
         json.dump(final_metrics, f, indent=4)
     logger.info(f"Metrics saved to {metrics_file}")
