@@ -112,7 +112,7 @@ def main():
     
     config = load_config(config_path)
     
-    results_dir = os.path.join(base_dir, config.get('output', {}).get('results_dir', 'results'))
+    results_dir = os.path.join(base_dir, config.get('output', {}).get('results_dir', 'results/new_processed'))
     checkpoint_dir = os.path.join(base_dir, config.get('output', {}).get('checkpoint_dir', 'checkpoints'))
     
     os.makedirs(results_dir, exist_ok=True)

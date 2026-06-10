@@ -34,5 +34,5 @@ training:
 
 output:
   checkpoint_dir: checkpoints
-  results_dir: results
+  results_dir: results/new_processed
   reports_dir: reports
