@@ -148,9 +148,11 @@ def main():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=lr)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=3)
-    scaler = torch.cuda.amp.GradScaler(enabled=device.type=='cuda')
+    scaler = torch.amp.GradScaler(device.type, enabled=device.type=='cuda')
     
     best_f1 = 0.0
+    patience_counter = 0
+    early_stopping_patience = config.get('training', {}).get('early_stopping_patience', 5)
     history = {'train_loss': [], 'train_acc': [], 'train_f1': [], 'val_loss': [], 'val_acc': [], 'val_f1': []}
     
     for epoch in range(epochs):
@@ -175,6 +177,13 @@ def main():
             checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
             torch.save(model.state_dict(), checkpoint_path)
             logger.info(f"Saved new best model with F1: {best_f1:.4f}")
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            logger.info(f"No improvement for {patience_counter}/{early_stopping_patience} epoch(s).")
+            if patience_counter >= early_stopping_patience:
+                logger.info(f"Early stopping triggered after {epoch+1} epochs!")
+                break
             
     # Final test evaluation
     best_model_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')

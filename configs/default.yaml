@@ -6,7 +6,7 @@ project:
 data:
   raw_root: data/raw/plant-disease-dataset
   processed_root: data/plantvillage_tomato_full
-  train_dir: data/new_processed/train
+  train_dir: data/new_processed_copy_paste/train_augmented
   val_dir: data/new_processed/val
   test_dir: data/new_processed/test
   class_map: data/plantvillage_tomato_full/metadata/class_to_idx.json
@@ -16,7 +16,7 @@ data:
 
 model:
   name: resnet50
-  num_classes: 10
+  num_classes: 11
   pretrained: true
 
 training:
@@ -34,5 +34,5 @@ training:
 
 output:
   checkpoint_dir: checkpoints
-  results_dir: results/new_processed
+  results_dir: results/augmented_result
   reports_dir: reports
