@@ -1,0 +1,126 @@
+2026-06-16 12:07:30,490 - INFO - Starting training for mobilenet_v3_small
+2026-06-16 12:07:30,574 - INFO - Using device: cuda
+2026-06-16 12:07:30,887 - INFO - Creating model: mobilenet_v3_small
+2026-06-16 12:07:30,888 - WARNING - Failed to load via timm with name mobilenet_v3_small. Attempting fallback name mobilenetv3_small_100
+2026-06-16 12:07:31,920 - INFO - Epoch 1/30
+2026-06-16 12:10:27,500 - INFO - Train - Loss: 0.8781, Acc: 0.7273, F1: 0.6680
+2026-06-16 12:10:27,501 - INFO - Val - Loss: 0.6645, Acc: 0.7901, F1: 0.7382
+2026-06-16 12:10:27,646 - INFO - Saved new best model with F1: 0.7382
+2026-06-16 12:10:27,646 - INFO - Epoch 2/30
+2026-06-16 12:12:45,703 - INFO - Train - Loss: 0.4658, Acc: 0.8376, F1: 0.8064
+2026-06-16 12:12:45,704 - INFO - Val - Loss: 0.3052, Acc: 0.8851, F1: 0.8717
+2026-06-16 12:12:45,741 - INFO - Saved new best model with F1: 0.8717
+2026-06-16 12:12:45,741 - INFO - Epoch 3/30
+2026-06-16 12:15:19,410 - INFO - Train - Loss: 0.3788, Acc: 0.8632, F1: 0.8398
+2026-06-16 12:15:19,410 - INFO - Val - Loss: 0.2285, Acc: 0.9183, F1: 0.9135
+2026-06-16 12:15:19,444 - INFO - Saved new best model with F1: 0.9135
+2026-06-16 12:15:19,444 - INFO - Epoch 4/30
+2026-06-16 12:17:58,306 - INFO - Train - Loss: 0.3421, Acc: 0.8761, F1: 0.8567
+2026-06-16 12:17:58,306 - INFO - Val - Loss: 0.2078, Acc: 0.9218, F1: 0.9117
+2026-06-16 12:17:58,306 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 12:17:58,308 - INFO - Epoch 5/30
+2026-06-16 12:20:54,518 - INFO - Train - Loss: 0.3095, Acc: 0.8905, F1: 0.8715
+2026-06-16 12:20:54,518 - INFO - Val - Loss: 0.2319, Acc: 0.9080, F1: 0.9040
+2026-06-16 12:20:54,518 - INFO - No improvement for 2/5 epoch(s).
+2026-06-16 12:20:54,518 - INFO - Epoch 6/30
+2026-06-16 12:23:16,760 - INFO - Train - Loss: 0.2852, Acc: 0.8961, F1: 0.8804
+2026-06-16 12:23:16,761 - INFO - Val - Loss: 0.1618, Acc: 0.9387, F1: 0.9310
+2026-06-16 12:23:16,812 - INFO - Saved new best model with F1: 0.9310
+2026-06-16 12:23:16,812 - INFO - Epoch 7/30
+2026-06-16 12:26:00,602 - INFO - Train - Loss: 0.2724, Acc: 0.8999, F1: 0.8820
+2026-06-16 12:26:00,602 - INFO - Val - Loss: 0.1520, Acc: 0.9478, F1: 0.9497
+2026-06-16 12:26:00,632 - INFO - Saved new best model with F1: 0.9497
+2026-06-16 12:26:00,632 - INFO - Epoch 8/30
+2026-06-16 12:28:11,899 - INFO - Train - Loss: 0.2465, Acc: 0.9086, F1: 0.8931
+2026-06-16 12:28:11,899 - INFO - Val - Loss: 0.1735, Acc: 0.9334, F1: 0.9319
+2026-06-16 12:28:11,899 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 12:28:11,899 - INFO - Epoch 9/30
+2026-06-16 12:30:53,537 - INFO - Train - Loss: 0.2494, Acc: 0.9087, F1: 0.8935
+2026-06-16 12:30:53,537 - INFO - Val - Loss: 0.1884, Acc: 0.9373, F1: 0.9398
+2026-06-16 12:30:53,537 - INFO - No improvement for 2/5 epoch(s).
+2026-06-16 12:30:53,537 - INFO - Epoch 10/30
+2026-06-16 12:33:16,620 - INFO - Train - Loss: 0.2408, Acc: 0.9132, F1: 0.8983
+2026-06-16 12:33:16,620 - INFO - Val - Loss: 0.1482, Acc: 0.9456, F1: 0.9502
+2026-06-16 12:33:16,660 - INFO - Saved new best model with F1: 0.9502
+2026-06-16 12:33:16,660 - INFO - Epoch 11/30
+2026-06-16 12:35:15,657 - INFO - Train - Loss: 0.2153, Acc: 0.9210, F1: 0.9099
+2026-06-16 12:35:15,657 - INFO - Val - Loss: 0.2222, Acc: 0.9323, F1: 0.9316
+2026-06-16 12:35:15,657 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 12:35:15,657 - INFO - Epoch 12/30
+2026-06-16 12:37:46,767 - INFO - Train - Loss: 0.2195, Acc: 0.9200, F1: 0.9077
+2026-06-16 12:37:46,767 - INFO - Val - Loss: 0.1235, Acc: 0.9542, F1: 0.9527
+2026-06-16 12:37:46,806 - INFO - Saved new best model with F1: 0.9527
+2026-06-16 12:37:46,806 - INFO - Epoch 13/30
+2026-06-16 12:40:35,534 - INFO - Train - Loss: 0.2151, Acc: 0.9207, F1: 0.9090
+2026-06-16 12:40:35,534 - INFO - Val - Loss: 0.1300, Acc: 0.9555, F1: 0.9556
+2026-06-16 12:40:35,573 - INFO - Saved new best model with F1: 0.9556
+2026-06-16 12:40:35,574 - INFO - Epoch 14/30
+2026-06-16 12:43:23,850 - INFO - Train - Loss: 0.2070, Acc: 0.9254, F1: 0.9134
+2026-06-16 12:43:23,850 - INFO - Val - Loss: 0.1580, Acc: 0.9434, F1: 0.9424
+2026-06-16 12:43:23,851 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 12:43:23,851 - INFO - Epoch 15/30
+2026-06-16 12:46:02,555 - INFO - Train - Loss: 0.1909, Acc: 0.9295, F1: 0.9182
+2026-06-16 12:46:02,555 - INFO - Val - Loss: 0.1298, Acc: 0.9506, F1: 0.9540
+2026-06-16 12:46:02,555 - INFO - No improvement for 2/5 epoch(s).
+2026-06-16 12:46:02,556 - INFO - Epoch 16/30
+2026-06-16 12:48:26,342 - INFO - Train - Loss: 0.2033, Acc: 0.9273, F1: 0.9134
+2026-06-16 12:48:26,342 - INFO - Val - Loss: 0.1292, Acc: 0.9467, F1: 0.9501
+2026-06-16 12:48:26,342 - INFO - No improvement for 3/5 epoch(s).
+2026-06-16 12:48:26,342 - INFO - Epoch 17/30
+2026-06-16 12:51:04,719 - INFO - Train - Loss: 0.1804, Acc: 0.9344, F1: 0.9254
+2026-06-16 12:51:04,719 - INFO - Val - Loss: 0.1134, Acc: 0.9600, F1: 0.9630
+2026-06-16 12:51:04,769 - INFO - Saved new best model with F1: 0.9630
+2026-06-16 12:51:04,770 - INFO - Epoch 18/30
+2026-06-16 12:53:53,638 - INFO - Train - Loss: 0.1670, Acc: 0.9394, F1: 0.9297
+2026-06-16 12:53:53,639 - INFO - Val - Loss: 0.1560, Acc: 0.9525, F1: 0.9509
+2026-06-16 12:53:53,639 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 12:53:53,640 - INFO - Epoch 19/30
+2026-06-16 12:56:02,758 - INFO - Train - Loss: 0.1707, Acc: 0.9393, F1: 0.9283
+2026-06-16 12:56:02,758 - INFO - Val - Loss: 0.1060, Acc: 0.9633, F1: 0.9658
+2026-06-16 12:56:02,862 - INFO - Saved new best model with F1: 0.9658
+2026-06-16 12:56:02,863 - INFO - Epoch 20/30
+2026-06-16 12:58:17,397 - INFO - Train - Loss: 0.1674, Acc: 0.9387, F1: 0.9302
+2026-06-16 12:58:17,398 - INFO - Val - Loss: 0.1119, Acc: 0.9591, F1: 0.9622
+2026-06-16 12:58:17,398 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 12:58:17,398 - INFO - Epoch 21/30
+2026-06-16 13:01:04,396 - INFO - Train - Loss: 0.1571, Acc: 0.9437, F1: 0.9340
+2026-06-16 13:01:04,397 - INFO - Val - Loss: 0.1092, Acc: 0.9635, F1: 0.9649
+2026-06-16 13:01:04,398 - INFO - No improvement for 2/5 epoch(s).
+2026-06-16 13:01:04,398 - INFO - Epoch 22/30
+2026-06-16 13:03:48,167 - INFO - Train - Loss: 0.1606, Acc: 0.9423, F1: 0.9332
+2026-06-16 13:03:48,167 - INFO - Val - Loss: 0.1209, Acc: 0.9583, F1: 0.9463
+2026-06-16 13:03:48,167 - INFO - No improvement for 3/5 epoch(s).
+2026-06-16 13:03:48,167 - INFO - Epoch 23/30
+2026-06-16 13:06:24,396 - INFO - Train - Loss: 0.1645, Acc: 0.9410, F1: 0.9315
+2026-06-16 13:06:24,396 - INFO - Val - Loss: 0.1330, Acc: 0.9553, F1: 0.9570
+2026-06-16 13:06:24,399 - INFO - No improvement for 4/5 epoch(s).
+2026-06-16 13:06:24,400 - INFO - Epoch 24/30
+2026-06-16 13:08:49,542 - INFO - Train - Loss: 0.1177, Acc: 0.9576, F1: 0.9513
+2026-06-16 13:08:49,542 - INFO - Val - Loss: 0.0805, Acc: 0.9729, F1: 0.9751
+2026-06-16 13:08:49,583 - INFO - Saved new best model with F1: 0.9751
+2026-06-16 13:08:49,583 - INFO - Epoch 25/30
+2026-06-16 13:11:28,362 - INFO - Train - Loss: 0.1116, Acc: 0.9594, F1: 0.9541
+2026-06-16 13:11:28,362 - INFO - Val - Loss: 0.0795, Acc: 0.9743, F1: 0.9757
+2026-06-16 13:11:28,405 - INFO - Saved new best model with F1: 0.9757
+2026-06-16 13:11:28,406 - INFO - Epoch 26/30
+2026-06-16 13:14:13,991 - INFO - Train - Loss: 0.1098, Acc: 0.9603, F1: 0.9541
+2026-06-16 13:14:13,993 - INFO - Val - Loss: 0.0689, Acc: 0.9760, F1: 0.9770
+2026-06-16 13:14:14,056 - INFO - Saved new best model with F1: 0.9770
+2026-06-16 13:14:14,056 - INFO - Epoch 27/30
+2026-06-16 13:17:13,307 - INFO - Train - Loss: 0.1050, Acc: 0.9628, F1: 0.9577
+2026-06-16 13:17:13,308 - INFO - Val - Loss: 0.0689, Acc: 0.9757, F1: 0.9777
+2026-06-16 13:17:13,344 - INFO - Saved new best model with F1: 0.9777
+2026-06-16 13:17:13,344 - INFO - Epoch 28/30
+2026-06-16 13:20:04,880 - INFO - Train - Loss: 0.1021, Acc: 0.9647, F1: 0.9599
+2026-06-16 13:20:04,880 - INFO - Val - Loss: 0.0721, Acc: 0.9774, F1: 0.9798
+2026-06-16 13:20:04,921 - INFO - Saved new best model with F1: 0.9798
+2026-06-16 13:20:04,921 - INFO - Epoch 29/30
+2026-06-16 13:22:56,674 - INFO - Train - Loss: 0.1025, Acc: 0.9638, F1: 0.9585
+2026-06-16 13:22:56,675 - INFO - Val - Loss: 0.0734, Acc: 0.9782, F1: 0.9805
+2026-06-16 13:22:56,730 - INFO - Saved new best model with F1: 0.9805
+2026-06-16 13:22:56,735 - INFO - Epoch 30/30
+2026-06-16 13:25:30,611 - INFO - Train - Loss: 0.1016, Acc: 0.9638, F1: 0.9582
+2026-06-16 13:25:30,611 - INFO - Val - Loss: 0.0776, Acc: 0.9760, F1: 0.9795
+2026-06-16 13:25:30,612 - INFO - No improvement for 1/5 epoch(s).
+2026-06-16 13:26:57,016 - INFO - Test - Loss: 0.0439, Acc: 0.9853, F1: 0.9849, Precision: 0.9849, Recall: 0.9850
+2026-06-16 13:26:57,047 - INFO - Metrics saved to d:\Code\python\plant-disease-detection\results/new_data_result\mobilenet_v3_small_metrics.json

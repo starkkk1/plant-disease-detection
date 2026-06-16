@@ -203,7 +203,7 @@ def main():
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    tv_dir = os.path.join(base_dir, 'data', 'new_processed', 'eval', 'Tomato-Village')
+    tv_dir = os.path.join(base_dir, 'data', 'new-data', 'eval')
     tl_dir = os.path.join(base_dir, 'data', 'new_processed', 'eval', 'Tomato_Leaves')
 
     final_metrics = {
@@ -221,7 +221,7 @@ def main():
         tv_dataset = ImageFolder(tv_dir, transform=test_transform)
         tv_loader = DataLoader(tv_dataset, batch_size=config.get('data', {}).get('batch_size', 32), shuffle=False)
         tv_loss, tv_acc, tv_f1, tv_prec, tv_rec = validate(model, tv_loader, criterion, device)
-        logger.info(f"Tomato-Village Eval - Loss: {tv_loss:.4f}, Acc: {tv_acc:.4f}, F1: {tv_f1:.4f}, Precision: {tv_prec:.4f}, Recall: {tv_rec:.4f}")
+        logger.info(f"Eval (new-data) - Loss: {tv_loss:.4f}, Acc: {tv_acc:.4f}, F1: {tv_f1:.4f}, Precision: {tv_prec:.4f}, Recall: {tv_rec:.4f}")
         final_metrics['eval_tomato_village'] = {
             'loss': tv_loss, 'accuracy': tv_acc, 'f1': tv_f1, 'precision': tv_prec, 'recall': tv_rec
         }

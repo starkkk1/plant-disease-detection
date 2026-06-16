@@ -99,14 +99,14 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     
-    tv_dir = os.path.join(base_dir, 'data', 'new_processed', 'eval', 'Tomato-Village')
+    tv_dir = os.path.join(base_dir, 'data', 'new-data', 'eval')
     if os.path.exists(tv_dir):
-        print(f"--- Evaluating {model_name} on Tomato-Village ---")
+        print(f"--- Evaluating {model_name} on new-data Eval ---")
         tv_dataset = get_mapped_dataset(tv_dir, train_class_to_idx, test_transform)
         if len(tv_dataset) > 0:
             tv_loader = DataLoader(tv_dataset, batch_size=32, shuffle=False)
             tv_loss, tv_acc, tv_f1, tv_prec, tv_rec = validate(model, tv_loader, criterion, device)
-            print(f"{model_name} Tomato-Village -> Loss: {tv_loss:.4f} | Acc: {tv_acc:.4f} | F1: {tv_f1:.4f}\n")
+            print(f"{model_name} new-data Eval -> Loss: {tv_loss:.4f} | Acc: {tv_acc:.4f} | F1: {tv_f1:.4f}\n")
         else:
             print("No valid classes found to evaluate.\n")
             

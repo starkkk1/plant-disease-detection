@@ -6,10 +6,10 @@ project:
 data:
   raw_root: data/raw/plant-disease-dataset
   processed_root: data/plantvillage_tomato_full
-  train_dir: data/new_processed_copy_paste/train_augmented
-  val_dir: data/new_processed/val
-  test_dir: data/new_processed/test
-  class_map: data/plantvillage_tomato_full/metadata/class_to_idx.json
+  train_dir: data/new-data/train
+  val_dir: data/new-data/val
+  test_dir: data/new-data/test
+  class_map: data/new-data/class_to_idx.json
   image_size: 224
   batch_size: 32
   num_workers: 4
@@ -34,5 +34,5 @@ training:
 
 output:
   checkpoint_dir: checkpoints
-  results_dir: results/augmented_result
+  results_dir: results/new_data_result
   reports_dir: reports
