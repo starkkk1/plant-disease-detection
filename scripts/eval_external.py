@@ -80,7 +80,11 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
     config = load_config(config_path)
     model_name = config.get('model', {}).get('name', model_cfg_name)
     checkpoint_dir = os.path.join(base_dir, config.get('output', {}).get('checkpoint_dir', 'checkpoints'))
-    checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
+    
+    if 'distillation' in model_cfg_name:
+        checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_distilled_best.pth')
+    else:
+        checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
     
     if not os.path.exists(checkpoint_path):
         print(f"Error: Checkpoint not found at {checkpoint_path}")
@@ -92,8 +96,8 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
     try:
         model = timm.create_model(model_name, pretrained=False, num_classes=num_classes)
     except Exception as e:
-        fallback = 'mobilenetv3_small_100' if 'v3' in model_name else 'mobilenetv2_100'
-        model = timm.create_model(fallback, pretrained=False, num_classes=num_classes)
+        print(f"Error creating model {model_name}: {e}")
+        return
         
     model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model = model.to(device)
@@ -128,7 +132,7 @@ def main():
 
     models_to_run = []
     if args.all:
-        models_to_run = ['efficientnet_b0', 'mobilenet_v2', 'mobilenet_v3_small', 'mobilevit_xs', 'resnet50']
+        models_to_run = ['convnext', 'distillation_mobilenetv3', 'distillation_effnetb0', 'efficientnet_b0', 'mobilenet_v3_small']
     elif args.models:
         models_to_run = args.models
     else:

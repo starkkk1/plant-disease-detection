@@ -18,7 +18,9 @@ def get_target_layer(model, model_name):
     Returns the target layer for Grad-CAM based on the model name.
     """
     model_name = model_name.lower()
-    if 'resnet' in model_name:
+    if 'convnext' in model_name:
+        return [model.stages[-1].blocks[-1]]
+    elif 'resnet' in model_name:
         return [model.layer4[-1]]
     elif 'efficientnet' in model_name:
         return [model.blocks[-1]]
