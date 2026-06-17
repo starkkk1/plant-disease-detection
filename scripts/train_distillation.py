@@ -1,6 +1,6 @@
 """
-Training script for ResNet50 model.
-Logs metrics during and after training.
+Knowledge Distillation Training Script.
+Trains a lightweight student model using a larger, robust teacher model.
 """
 
 import os
@@ -10,25 +10,26 @@ import logging
 import json
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from tqdm import tqdm
 import timm
+from timm.data import Mixup
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+import argparse
 
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.data.dataset import get_dataloaders
+from src.datasets.dataset import get_dataloaders
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
     if 'defaults' in config:
-        # Resolve default config path
         default_path = os.path.join(os.path.dirname(config_path), os.path.basename(config['defaults']))
         with open(default_path, 'r') as f:
             default_config = yaml.safe_load(f)
-        
         merged = {**default_config, **config}
         for k, v in config.items():
             if isinstance(v, dict) and k in default_config and isinstance(default_config[k], dict):
@@ -37,7 +38,7 @@ def load_config(config_path):
     return config
 
 def setup_logger(log_file):
-    logger = logging.getLogger('resnet50')
+    logger = logging.getLogger('distillation')
     logger.setLevel(logging.INFO)
     fh = logging.FileHandler(log_file)
     fh.setLevel(logging.INFO)
@@ -51,34 +52,60 @@ def setup_logger(log_file):
         logger.addHandler(ch)
     return logger
 
-def train_one_epoch(model, dataloader, criterion, optimizer, device, scaler):
-    model.train()
+class DistillationLoss(nn.Module):
+    """
+    Computes the Knowledge Distillation loss.
+    Loss = (1 - alpha) * CE(student_logits, true_labels) + (alpha * T^2) * KL(student_logits/T, teacher_logits/T)
+    Note: If Mixup is used, the true_labels are soft labels, so we use CrossEntropy or SoftTargetCrossEntropy accordingly.
+    """
+    def __init__(self, alpha=0.5, temperature=3.0, base_criterion=None):
+        super().__init__()
+        self.alpha = alpha
+        self.T = temperature
+        self.base_criterion = base_criterion
+
+    def forward(self, student_logits, teacher_logits, targets):
+        # Student loss on true labels (which might be mixup soft labels)
+        base_loss = self.base_criterion(student_logits, targets)
+        
+        # Distillation loss
+        student_log_probs = F.log_softmax(student_logits / self.T, dim=1)
+        teacher_probs = F.softmax(teacher_logits / self.T, dim=1)
+        distillation_loss = F.kl_div(student_log_probs, teacher_probs, reduction='batchmean') * (self.T ** 2)
+        
+        return (1.0 - self.alpha) * base_loss + self.alpha * distillation_loss
+
+def train_one_epoch(student, teacher, dataloader, criterion, optimizer, device, scaler, mixup_fn):
+    student.train()
+    teacher.eval() # Teacher is always in eval mode
     running_loss = 0.0
-    all_preds = []
-    all_targets = []
     
     for inputs, targets in tqdm(dataloader, desc="Training"):
         inputs, targets = inputs.to(device), targets.to(device)
         
+        if mixup_fn is not None:
+            inputs, targets = mixup_fn(inputs, targets)
+            
         optimizer.zero_grad()
         with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=device.type=='cuda'):
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            # Teacher forward pass (no gradients)
+            with torch.no_grad():
+                teacher_logits = teacher(inputs)
+            
+            # Student forward pass
+            student_logits = student(inputs)
+            
+            # Compute Distillation Loss
+            loss = criterion(student_logits, teacher_logits, targets)
             
         scaler.scale(loss).backward()
         scaler.step(optimizer)
         scaler.update()
         
         running_loss += loss.item() * inputs.size(0)
-        _, preds = torch.max(outputs, 1)
-        all_preds.extend(preds.cpu().numpy())
-        all_targets.extend(targets.cpu().numpy())
         
     epoch_loss = running_loss / len(dataloader.dataset)
-    acc = accuracy_score(all_targets, all_preds)
-    f1 = f1_score(all_targets, all_preds, average='macro', zero_division=0)
-    
-    return epoch_loss, acc, f1
+    return epoch_loss
 
 def validate(model, dataloader, criterion, device):
     model.eval()
@@ -107,8 +134,12 @@ def validate(model, dataloader, criterion, device):
     return epoch_loss, acc, f1, precision, recall
 
 def main():
+    parser = argparse.ArgumentParser(description="Knowledge Distillation Training")
+    parser.add_argument('--config', type=str, default='configs/distillation_mobilenetv3.yaml', help='Path to config file')
+    args = parser.parse_args()
+
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    config_path = os.path.join(base_dir, 'configs', 'resnet50.yaml')
+    config_path = os.path.join(base_dir, args.config)
     
     config = load_config(config_path)
     
@@ -118,17 +149,21 @@ def main():
     os.makedirs(results_dir, exist_ok=True)
     os.makedirs(checkpoint_dir, exist_ok=True)
     
-    model_name = config.get('model', {}).get('name', 'resnet50')
-    log_file = os.path.join(results_dir, f'{model_name}_training.log')
-    metrics_file = os.path.join(results_dir, f'{model_name}_metrics.json')
+    student_name = config.get('model', {}).get('name', 'mobilenet_v3_small')
+    teacher_name = config.get('distillation', {}).get('teacher_model', 'convnext_tiny')
+    teacher_ckpt = os.path.join(base_dir, config.get('distillation', {}).get('teacher_checkpoint', 'checkpoints/convnext_tiny_best.pth'))
+    
+    log_file = os.path.join(results_dir, f'{student_name}_distilled_training.log')
+    metrics_file = os.path.join(results_dir, f'{student_name}_distilled_metrics.json')
     
     logger = setup_logger(log_file)
-    logger.info(f"Starting training for {model_name}")
+    logger.info(f"Starting Knowledge Distillation.")
+    logger.info(f"Teacher: {teacher_name}")
+    logger.info(f"Student: {student_name}")
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     logger.info(f"Using device: {device}")
     
-    # Adjust config paths if needed
     for key in ['train_dir', 'val_dir', 'test_dir']:
         if key in config.get('data', {}):
             config['data'][key] = os.path.join(base_dir, config['data'][key])
@@ -136,36 +171,66 @@ def main():
     train_loader, val_loader, test_loader = get_dataloaders(config)
     
     num_classes = config.get('model', {}).get('num_classes', 10)
-    pretrained = config.get('model', {}).get('pretrained', True)
     
-    logger.info(f"Creating model: {model_name}")
-    model = timm.create_model(model_name, pretrained=pretrained, num_classes=num_classes)
-    model = model.to(device)
+    # Init Teacher
+    logger.info(f"Loading Teacher model...")
+    teacher = timm.create_model(teacher_name, pretrained=False, num_classes=num_classes)
+    if not os.path.exists(teacher_ckpt):
+        logger.error(f"Teacher checkpoint not found at {teacher_ckpt}. Please train the teacher first.")
+        return
+    teacher.load_state_dict(torch.load(teacher_ckpt, map_location=device))
+    teacher = teacher.to(device)
+    teacher.eval()
+    for param in teacher.parameters():
+        param.requires_grad = False
+        
+    # Init Student
+    logger.info(f"Loading Student model...")
+    student = timm.create_model(student_name, pretrained=config.get('model', {}).get('pretrained', True), num_classes=num_classes)
+    student = student.to(device)
     
     lr = float(config.get('training', {}).get('lr', 1e-4))
     epochs = int(config.get('training', {}).get('epochs', 30))
     
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    # Setup Mixup
+    from timm.loss import SoftTargetCrossEntropy
+    mixup_args = {
+        'mixup_alpha': config.get('training', {}).get('mixup_alpha', 0.8),
+        'cutmix_alpha': config.get('training', {}).get('cutmix_alpha', 1.0),
+        'prob': config.get('training', {}).get('prob', 1.0),
+        'switch_prob': config.get('training', {}).get('switch_prob', 0.5),
+        'mode': 'batch',
+        'label_smoothing': 0.1,
+        'num_classes': num_classes
+    }
+    mixup_fn = Mixup(**mixup_args)
+    
+    base_train_criterion = SoftTargetCrossEntropy()
+    kd_criterion = DistillationLoss(
+        alpha=config.get('distillation', {}).get('alpha', 0.5),
+        temperature=config.get('distillation', {}).get('temperature', 3.0),
+        base_criterion=base_train_criterion
+    )
+    val_criterion = nn.CrossEntropyLoss()
+    
+    optimizer = optim.AdamW(student.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.5, patience=3)
     scaler = torch.amp.GradScaler(device.type, enabled=device.type=='cuda')
     
     best_f1 = 0.0
     patience_counter = 0
     early_stopping_patience = config.get('training', {}).get('early_stopping_patience', 5)
-    history = {'train_loss': [], 'train_acc': [], 'train_f1': [], 'val_loss': [], 'val_acc': [], 'val_f1': []}
+    history = {'train_loss': [], 'val_loss': [], 'val_acc': [], 'val_f1': []}
     
     for epoch in range(epochs):
         logger.info(f"Epoch {epoch+1}/{epochs}")
-        train_loss, train_acc, train_f1 = train_one_epoch(model, train_loader, criterion, optimizer, device, scaler)
-        val_loss, val_acc, val_f1, val_prec, val_rec = validate(model, val_loader, criterion, device)
+        train_loss = train_one_epoch(student, teacher, train_loader, kd_criterion, optimizer, device, scaler, mixup_fn)
+        val_loss, val_acc, val_f1, val_prec, val_rec = validate(student, val_loader, val_criterion, device)
         
-        logger.info(f"Train - Loss: {train_loss:.4f}, Acc: {train_acc:.4f}, F1: {train_f1:.4f}")
+        logger.info(f"Train - KD Loss: {train_loss:.4f}")
         logger.info(f"Val - Loss: {val_loss:.4f}, Acc: {val_acc:.4f}, F1: {val_f1:.4f}")
         
         history['train_loss'].append(train_loss)
-        history['train_acc'].append(train_acc)
-        history['train_f1'].append(train_f1)
         history['val_loss'].append(val_loss)
         history['val_acc'].append(val_acc)
         history['val_f1'].append(val_f1)
@@ -174,8 +239,8 @@ def main():
         
         if val_f1 > best_f1:
             best_f1 = val_f1
-            checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
-            torch.save(model.state_dict(), checkpoint_path)
+            checkpoint_path = os.path.join(checkpoint_dir, f'{student_name}_distilled_best.pth')
+            torch.save(student.state_dict(), checkpoint_path)
             logger.info(f"Saved new best model with F1: {best_f1:.4f}")
             patience_counter = 0
         else:
@@ -186,25 +251,11 @@ def main():
                 break
             
     # Final test evaluation
-    best_model_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
+    best_model_path = os.path.join(checkpoint_dir, f'{student_name}_distilled_best.pth')
     if os.path.exists(best_model_path):
-        model.load_state_dict(torch.load(best_model_path))
-    test_loss, test_acc, test_f1, test_prec, test_rec = validate(model, test_loader, criterion, device)
+        student.load_state_dict(torch.load(best_model_path))
+    test_loss, test_acc, test_f1, test_prec, test_rec = validate(student, test_loader, val_criterion, device)
     logger.info(f"Test - Loss: {test_loss:.4f}, Acc: {test_acc:.4f}, F1: {test_f1:.4f}, Precision: {test_prec:.4f}, Recall: {test_rec:.4f}")
-    
-    import torchvision.transforms as transforms
-    from torchvision.datasets import ImageFolder
-    from torch.utils.data import DataLoader
-
-    test_transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-
-    tv_dir = os.path.join(base_dir, 'data', 'new-data', 'eval')
-    tl_dir = os.path.join(base_dir, 'data', 'new_processed', 'eval', 'Tomato_Leaves')
 
     final_metrics = {
         'test_loss': test_loss,
@@ -213,29 +264,8 @@ def main():
         'test_precision': test_prec,
         'test_recall': test_rec,
         'history': history,
-        'eval_tomato_village': {},
-        'eval_tomato_leaves': {}
     }
 
-    if os.path.exists(tv_dir):
-        tv_dataset = ImageFolder(tv_dir, transform=test_transform)
-        tv_loader = DataLoader(tv_dataset, batch_size=config.get('data', {}).get('batch_size', 32), shuffle=False)
-        tv_loss, tv_acc, tv_f1, tv_prec, tv_rec = validate(model, tv_loader, criterion, device)
-        logger.info(f"Eval (new-data) - Loss: {tv_loss:.4f}, Acc: {tv_acc:.4f}, F1: {tv_f1:.4f}, Precision: {tv_prec:.4f}, Recall: {tv_rec:.4f}")
-        final_metrics['eval_tomato_village'] = {
-            'loss': tv_loss, 'accuracy': tv_acc, 'f1': tv_f1, 'precision': tv_prec, 'recall': tv_rec
-        }
-
-    if os.path.exists(tl_dir):
-        tl_dataset = ImageFolder(tl_dir, transform=test_transform)
-        tl_loader = DataLoader(tl_dataset, batch_size=config.get('data', {}).get('batch_size', 32), shuffle=False)
-        tl_loss, tl_acc, tl_f1, tl_prec, tl_rec = validate(model, tl_loader, criterion, device)
-        logger.info(f"Tomato_Leaves Eval - Loss: {tl_loss:.4f}, Acc: {tl_acc:.4f}, F1: {tl_f1:.4f}, Precision: {tl_prec:.4f}, Recall: {tl_rec:.4f}")
-        final_metrics['eval_tomato_leaves'] = {
-            'loss': tl_loss, 'accuracy': tl_acc, 'f1': tl_f1, 'precision': tl_prec, 'recall': tl_rec
-        }
-
-    # Save final metrics
     with open(metrics_file, 'w') as f:
         json.dump(final_metrics, f, indent=4)
     logger.info(f"Metrics saved to {metrics_file}")

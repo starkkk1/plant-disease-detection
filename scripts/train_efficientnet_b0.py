@@ -18,7 +18,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 # Add project root to path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.data.dataset import get_dataloaders
+from src.datasets.dataset import get_dataloaders
 
 def load_config(config_path):
     with open(config_path, 'r') as f:
