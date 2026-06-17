@@ -34,5 +34,5 @@ training:
 
 output:
   checkpoint_dir: checkpoints
-  results_dir: results/new_data_result
+  results_dir: results/distillation_effnetb0_mobilenetv3
   reports_dir: reports

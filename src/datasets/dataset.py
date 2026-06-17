@@ -59,7 +59,8 @@ def get_dataloaders(config):
         batch_size=batch_size, 
         shuffle=True, 
         num_workers=num_workers,
-        pin_memory=True
+        pin_memory=True,
+        drop_last=True
     )
     
     val_loader = DataLoader(

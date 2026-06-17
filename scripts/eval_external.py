@@ -128,6 +128,7 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate trained models")
     parser.add_argument('--models', type=str, nargs='+', help="List of model config names (e.g., mobilenet_v3_small resnet50)")
     parser.add_argument('--all', action='store_true', help="Evaluate all 5 standard models")
+    parser.add_argument('--convnext', action='store_true', help="Evaluate the convnext model")
     args = parser.parse_args()
 
     models_to_run = []
@@ -135,8 +136,10 @@ def main():
         models_to_run = ['convnext', 'distillation_mobilenetv3', 'distillation_effnetb0', 'efficientnet_b0', 'mobilenet_v3_small']
     elif args.models:
         models_to_run = args.models
+    elif args.convnext:
+        models_to_run = ['convnext']
     else:
-        print("Please provide models using --models or use --all.")
+        print("Please provide models using --models, --all, or --convnext.")
         return
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

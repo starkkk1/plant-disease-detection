@@ -128,7 +128,10 @@ def main():
         if key in config.get('data', {}):
             config['data'][key] = os.path.join(base_dir, config['data'][key])
             
-    train_loader, val_loader, test_loader = get_dataloaders(config)
+    loaders, class_weights = get_dataloaders(config)
+    train_loader = loaders.get('train')
+    val_loader = loaders.get('val')
+    test_loader = loaders.get('test', val_loader)
     
     num_classes = config.get('model', {}).get('num_classes', 10)
     pretrained = config.get('model', {}).get('pretrained', True)

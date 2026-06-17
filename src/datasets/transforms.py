@@ -12,12 +12,12 @@ def get_transforms(config, split="train"):
 
     if split == "train":
         return A.Compose([
-            A.RandomResizedCrop(height=image_size, width=image_size, scale=(0.8, 1.0)),
+            A.RandomResizedCrop(size=(image_size, image_size), scale=(0.8, 1.0)),
             A.HorizontalFlip(p=0.5),
             A.VerticalFlip(p=0.5),
-            A.ShiftScaleRotate(shift_limit=0.1, scale_limit=0.1, rotate_limit=15, p=0.5),
+            A.Affine(scale=(0.9, 1.1), translate_percent=(-0.1, 0.1), rotate=(-15, 15), p=0.5),
             A.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1, p=0.5),
-            A.CoarseDropout(max_holes=8, max_height=32, max_width=32, fill_value=0, p=0.5),
+            A.CoarseDropout(num_holes_range=(1, 8), hole_height_range=(1, 32), hole_width_range=(1, 32), fill=0, p=0.5),
             A.Normalize(mean=mean, std=std),
             ToTensorV2()
         ])
