@@ -1,0 +1,35 @@
+name: cyclegan
+defaults: configs/default.yaml
+
+data:
+  domain_a_dir: "data/new_processed_augmented/train_augmented"
+  domain_b_dir: "data/new-data/eval"
+  image_size: 256 # CycleGAN usually trains on 256x256
+  crop_size: 256 # For random crop (not used strictly here if we resize to 256)
+  batch_size: 1
+  num_workers: 4
+
+model:
+  generator:
+    input_nc: 3
+    output_nc: 3
+    ngf: 64 # number of generator filters
+    n_blocks: 9 # 9 blocks for 256x256 images
+  discriminator:
+    input_nc: 3
+    ndf: 64 # number of discriminator filters
+    n_layers: 3 # 3 layers for PatchGAN
+
+training:
+  epochs: 200 # Standard CycleGAN trains for 200 epochs
+  lr: 0.0002
+  beta1: 0.5 # Adam beta1 for GANs
+  lambda_A: 10.0 # weight for cycle loss (A -> B -> A)
+  lambda_B: 10.0 # weight for cycle loss (B -> A -> B)
+  lambda_identity: 0.5 # weight for identity loss (A -> A) to preserve color/structure
+  pool_size: 50 # Image buffer pool size to stabilize training
+
+output:
+  checkpoint_dir: "checkpoints/cyclegan"
+  results_dir: "results/cyclegan"
+  sample_freq: 5 # Save sample images every 5 epochs
