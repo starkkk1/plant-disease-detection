@@ -94,6 +94,9 @@ class GANLoss(nn.Module):
         return self.loss(prediction, target_tensor)
 
 def main():
+    # Optimizations for RTX 2070 Super (Tensor Cores & CuDNN)
+    torch.backends.cudnn.benchmark = True
+    
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     config_path = os.path.join(base_dir, 'configs', 'cyclegan.yaml')
     config = load_config(config_path)
@@ -114,7 +117,13 @@ def main():
     domain_b_dir = os.path.join(base_dir, config['data']['domain_b_dir'])
     
     dataset = UnalignedDataset(domain_a_dir, domain_b_dir, image_size=config['data']['image_size'], is_train=True)
-    dataloader = DataLoader(dataset, batch_size=config['data']['batch_size'], shuffle=True, num_workers=config['data'].get('num_workers', 4))
+    dataloader = DataLoader(
+        dataset, 
+        batch_size=config['data']['batch_size'], 
+        shuffle=True, 
+        num_workers=config['data'].get('num_workers', 4),
+        pin_memory=True # Speed up CPU to GPU transfer
+    )
     
     logger.info(f"Dataset size: {len(dataset)}")
 

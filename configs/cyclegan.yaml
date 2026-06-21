@@ -3,7 +3,7 @@ defaults: configs/default.yaml
 
 data:
   domain_a_dir: "data/new_processed_augmented/train_augmented"
-  domain_b_dir: "data/new-data/eval"
+  domain_b_dir: "d:/Code/python/data+source/data+source/new-data/eval"
   image_size: 256 # CycleGAN usually trains on 256x256
   crop_size: 256 # For random crop (not used strictly here if we resize to 256)
   batch_size: 1
