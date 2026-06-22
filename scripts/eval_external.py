@@ -70,7 +70,7 @@ def get_mapped_dataset(eval_dir, train_class_to_idx, transform):
     dataset.targets = [s[1] for s in valid_samples]
     return dataset
 
-def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_transform):
+def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_transform, ckpt_path=None):
     config_path = os.path.join(base_dir, 'configs', f"{model_cfg_name}.yaml")
     
     if not os.path.exists(config_path):
@@ -81,10 +81,13 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
     model_name = config.get('model', {}).get('name', model_cfg_name)
     checkpoint_dir = os.path.join(base_dir, config.get('output', {}).get('checkpoint_dir', 'checkpoints'))
     
-    if 'distillation' in model_cfg_name:
-        checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_distilled_best.pth')
+    if ckpt_path:
+        checkpoint_path = os.path.join(base_dir, ckpt_path) if not os.path.isabs(ckpt_path) else ckpt_path
     else:
-        checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
+        if 'distillation' in model_cfg_name:
+            checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_distilled_best.pth')
+        else:
+            checkpoint_path = os.path.join(checkpoint_dir, f'{model_name}_best.pth')
     
     if not os.path.exists(checkpoint_path):
         print(f"Error: Checkpoint not found at {checkpoint_path}")
@@ -125,22 +128,38 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
     print("="*60)
 
 def main():
+    # ==========================================
+    # QUẢN LÝ NHANH BẰNG CODE (QUICK CONFIG)
+    # Đổi thành True nếu bạn muốn điền tên file trực tiếp ở đây thay vì dùng lệnh Terminal
+    USE_CUSTOM_CONFIG = True
+    CUSTOM_CONFIG_NAME = 'distillation_effnetb0'  # Ví dụ: 'convnext', 'distillation_mobilenetv3', 'efficientnet_b0'
+    CUSTOM_CKPT_PATH = 'checkpoints/efficientnet_b0_distilled_best.pth'  # Trỏ thẳng tới file .pth của bạn
+    # ==========================================
+
     parser = argparse.ArgumentParser(description="Evaluate trained models")
     parser.add_argument('--models', type=str, nargs='+', help="List of model config names (e.g., mobilenet_v3_small resnet50)")
     parser.add_argument('--all', action='store_true', help="Evaluate all 5 standard models")
     parser.add_argument('--convnext', action='store_true', help="Evaluate the convnext model")
+    parser.add_argument('--ckpt', type=str, help="Optional: Path to a specific .pth checkpoint file to evaluate")
     args = parser.parse_args()
 
     models_to_run = []
-    if args.all:
-        models_to_run = ['convnext', 'distillation_mobilenetv3', 'distillation_effnetb0', 'efficientnet_b0', 'mobilenet_v3_small']
-    elif args.models:
-        models_to_run = args.models
-    elif args.convnext:
-        models_to_run = ['convnext']
+    ckpt_to_use = args.ckpt
+
+    if USE_CUSTOM_CONFIG:
+        print(f"[*] Quick Config is ON. Loading file: {CUSTOM_CKPT_PATH}")
+        models_to_run = [CUSTOM_CONFIG_NAME]
+        ckpt_to_use = CUSTOM_CKPT_PATH
     else:
-        print("Please provide models using --models, --all, or --convnext.")
-        return
+        if args.all:
+            models_to_run = ['convnext', 'distillation_mobilenetv3', 'distillation_effnetb0', 'efficientnet_b0', 'mobilenet_v3_small']
+        elif args.models:
+            models_to_run = args.models
+        elif args.convnext:
+            models_to_run = ['convnext']
+        else:
+            print("Please provide models using --models, --all, or --convnext (or set USE_CUSTOM_CONFIG = True).")
+            return
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -165,7 +184,7 @@ def main():
     print("="*60)
     
     for model_name in models_to_run:
-        evaluate_model(model_name, base_dir, device, train_class_to_idx, test_transform)
+        evaluate_model(model_name, base_dir, device, train_class_to_idx, test_transform, ckpt_path=ckpt_to_use)
 
 if __name__ == '__main__':
     main()
