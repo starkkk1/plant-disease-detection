@@ -185,13 +185,13 @@ def main():
     # ==========================================
     USE_CUSTOM_CONFIG = True
     CUSTOM_DATASET = 'eval' # Chọn 'test' (ảnh sạch lab) hoặc 'eval' (ảnh hoang dã)
+    SCAN_ALL_CHECKPOINTS = True # Bật True để tự động quét toàn bộ thư mục checkpoints
     
-    # Danh sách các model muốn chạy cùng lúc. Cấu trúc: (tên_model, đường_dẫn_pth, tên_thư_mục_lưu_kết_quả)
+    # Nếu SCAN_ALL_CHECKPOINTS = False, nó sẽ chạy cấu hình thủ công dưới đây:
     CUSTOM_MODELS = [
         ('convnext_tiny', 'checkpoints/convnext_tiny_best.pth', 'convnext_tiny_teacher'),
         ('efficientnet_b0', 'checkpoints/efficientnet_b0_distilled_best.pth', 'efficientnet_b0_distilled'),
         ('mobilenetv3_small_100', 'checkpoints/mobilenetv3_small_100_distilled_best.pth', 'mobilenetv3_small_distilled'),
-        # ('efficientnet_b0', 'checkpoints/efficientnet_b0_best.pth', 'efficientnet_b0_normal'), # Mở comment nếu muốn chạy thêm
     ]
     # ==========================================
 
@@ -207,18 +207,33 @@ def main():
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
+    # Xóa sạch thư mục results/gradcam cũ trước khi chạy
+    gradcam_results_dir = os.path.join(base_dir, 'results', 'gradcam')
+    if os.path.exists(gradcam_results_dir):
+        print(f"[*] Đang dọn dẹp dữ liệu cũ tại: {gradcam_results_dir}...")
+        import shutil
+        shutil.rmtree(gradcam_results_dir, ignore_errors=True)
+    os.makedirs(gradcam_results_dir, exist_ok=True)
     
-    if torch.cuda.is_available():
-        torch.backends.cudnn.benchmark = True
-        print("Enabled cudnn.benchmark for optimized GPU performance.")
-        
     models_to_run = []
     
     if USE_CUSTOM_CONFIG:
-        print(f"[*] Quick Config is ON. Generating Grad-CAM for {len(CUSTOM_MODELS)} models on '{CUSTOM_DATASET}' dataset.")
-        models_to_run = CUSTOM_MODELS
+        if SCAN_ALL_CHECKPOINTS:
+            print(f"[*] Quick Config: Tự động quét TẤT CẢ model trong thư mục checkpoints để tạo bản đồ nhiệt...")
+            chk_dir = os.path.join(base_dir, 'checkpoints')
+            if os.path.exists(chk_dir):
+                for f in os.listdir(chk_dir):
+                    if f.endswith('.pth') and 'cyclegan' not in f.lower():
+                        model_name = infer_model_name(f)
+                        weights = os.path.join('checkpoints', f)
+                        out_name = os.path.splitext(f)[0]
+                        models_to_run.append((model_name, weights, out_name))
+                        print(f"  -> Tìm thấy: {f} (Model: {model_name})")
+            else:
+                print("Lỗi: Không tìm thấy thư mục checkpoints!")
+        else:
+            print(f"[*] Quick Config is ON. Generating Grad-CAM for {len(CUSTOM_MODELS)} models on '{CUSTOM_DATASET}' dataset.")
+            models_to_run = CUSTOM_MODELS
     else:
         if args.config:
             config = load_config(args.config)
@@ -252,7 +267,7 @@ def main():
     test_dir = args.test_dir
     if USE_CUSTOM_CONFIG:
         if CUSTOM_DATASET == 'eval':
-            test_dir = os.path.join(base_dir, 'data', 'new-data', 'eval')
+            test_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'eval')
         else:
             test_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'test')
     elif not test_dir:
@@ -268,9 +283,15 @@ def main():
         print("Error: No classes found in test directory.")
         return
         
-    for model_name, weights, out_name in models_to_run:
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"\nUsing device: {device}")
+    
+    if torch.cuda.is_available():
+        torch.backends.cudnn.benchmark = True
+        
+    for idx, (model_name, weights, out_name) in enumerate(models_to_run):
         print(f"\n{'='*60}")
-        print(f"  [STARTING] MÔ HÌNH: {model_name.upper()} ")
+        print(f"  [{idx+1}/{len(models_to_run)}] MÔ HÌNH: {model_name.upper()} (File: {os.path.basename(weights)})")
         print(f"{'='*60}")
         run_gradcam_for_model(model_name, weights, out_name, test_dir, classes, device, base_dir, args)
         

@@ -13,6 +13,23 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 import timm
 
+def infer_config_name(ckpt_name):
+    """
+    Tự động suy luận tên file config dựa vào tên file .pth
+    """
+    ckpt_name = ckpt_name.lower()
+    if 'convnext' in ckpt_name:
+        return 'convnext'
+    elif 'efficientnet' in ckpt_name:
+        if 'distilled' in ckpt_name:
+            return 'distillation_effnetb0'
+        return 'efficientnet_b0'
+    elif 'mobilenet' in ckpt_name:
+        if 'distilled' in ckpt_name:
+            return 'distillation_mobilenetv3'
+        return 'mobilenet_v3_small'
+    return None
+
 def load_config(config_path):
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
@@ -106,9 +123,9 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
     model = model.to(device)
     criterion = nn.CrossEntropyLoss()
     
-    tv_dir = os.path.join(base_dir, 'data', 'new-data', 'eval')
+    tv_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'eval')
     if os.path.exists(tv_dir):
-        print(f"--- Evaluating {model_name} on new-data Eval ---")
+        print(f"--- Evaluating {model_name} on new-data-removal Eval ---")
         tv_dataset = get_mapped_dataset(tv_dir, train_class_to_idx, test_transform)
         if len(tv_dataset) > 0:
             tv_loader = DataLoader(tv_dataset, batch_size=32, shuffle=False)
@@ -130,10 +147,13 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
 def main():
     # ==========================================
     # QUẢN LÝ NHANH BẰNG CODE (QUICK CONFIG)
-    # Đổi thành True nếu bạn muốn điền tên file trực tiếp ở đây thay vì dùng lệnh Terminal
+    # ==========================================
     USE_CUSTOM_CONFIG = True
-    CUSTOM_CONFIG_NAME = 'distillation_effnetb0'  # Ví dụ: 'convnext', 'distillation_mobilenetv3', 'efficientnet_b0'
-    CUSTOM_CKPT_PATH = 'checkpoints/efficientnet_b0_distilled_best.pth'  # Trỏ thẳng tới file .pth của bạn
+    SCAN_ALL_CHECKPOINTS = True # Đổi thành True để tự động quét tất cả file .pth trong thư mục checkpoints
+    
+    # Nếu SCAN_ALL_CHECKPOINTS = False, nó sẽ chạy cấu hình thủ công dưới đây:
+    CUSTOM_CONFIG_NAME = 'distillation_effnetb0' 
+    CUSTOM_CKPT_PATH = 'checkpoints/efficientnet_b0_distilled_best.pth'  
     # ==========================================
 
     parser = argparse.ArgumentParser(description="Evaluate trained models")
@@ -144,19 +164,39 @@ def main():
     args = parser.parse_args()
 
     models_to_run = []
-    ckpt_to_use = args.ckpt
+    # ckpt_to_use is now a list to support multiple ckpts in SCAN mode
+    ckpt_to_use_list = []
+
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+    chk_dir = os.path.join(base_dir, 'checkpoints')
 
     if USE_CUSTOM_CONFIG:
-        print(f"[*] Quick Config is ON. Loading file: {CUSTOM_CKPT_PATH}")
-        models_to_run = [CUSTOM_CONFIG_NAME]
-        ckpt_to_use = CUSTOM_CKPT_PATH
+        if SCAN_ALL_CHECKPOINTS:
+            print(f"[*] Quick Config: Tự động quét TẤT CẢ model trong thư mục checkpoints...")
+            if os.path.exists(chk_dir):
+                for f in os.listdir(chk_dir):
+                    if f.endswith('.pth') and 'cyclegan' not in f.lower():
+                        cfg_name = infer_config_name(f)
+                        if cfg_name:
+                            models_to_run.append(cfg_name)
+                            ckpt_to_use_list.append(os.path.join('checkpoints', f))
+                            print(f"  -> Tìm thấy: {f} (Config: {cfg_name})")
+            else:
+                print("Lỗi: Không tìm thấy thư mục checkpoints!")
+        else:
+            print(f"[*] Quick Config is ON. Loading file: {CUSTOM_CKPT_PATH}")
+            models_to_run = [CUSTOM_CONFIG_NAME]
+            ckpt_to_use_list = [CUSTOM_CKPT_PATH]
     else:
         if args.all:
             models_to_run = ['convnext', 'distillation_mobilenetv3', 'distillation_effnetb0', 'efficientnet_b0', 'mobilenet_v3_small']
+            ckpt_to_use_list = [None] * len(models_to_run)
         elif args.models:
             models_to_run = args.models
+            ckpt_to_use_list = [args.ckpt] * len(models_to_run)
         elif args.convnext:
             models_to_run = ['convnext']
+            ckpt_to_use_list = [args.ckpt]
         else:
             print("Please provide models using --models, --all, or --convnext (or set USE_CUSTOM_CONFIG = True).")
             return
@@ -183,8 +223,10 @@ def main():
     print(f"Found {len(train_class_to_idx)} training classes.")
     print("="*60)
     
-    for model_name in models_to_run:
-        evaluate_model(model_name, base_dir, device, train_class_to_idx, test_transform, ckpt_path=ckpt_to_use)
+    for idx, model_name in enumerate(models_to_run):
+        ckpt_path = ckpt_to_use_list[idx]
+        print(f"\n[{idx+1}/{len(models_to_run)}] ĐÁNH GIÁ MÔ HÌNH: {model_name} (File: {os.path.basename(ckpt_path) if ckpt_path else 'Default'})")
+        evaluate_model(model_name, base_dir, device, train_class_to_idx, test_transform, ckpt_path=ckpt_path)
 
 if __name__ == '__main__':
     main()
