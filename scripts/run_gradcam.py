@@ -60,7 +60,7 @@ def infer_model_name(ckpt_name):
     elif 'efficientnet' in ckpt_name:
         return 'efficientnet_b0'
     elif 'mobilenet' in ckpt_name:
-        return 'mobilenet_v3_small'
+        return 'mobilenetv3_small_100'
     else:
         return 'resnet50'
 
@@ -107,10 +107,17 @@ def run_gradcam_for_model(model_name, weights_path, out_name, test_dir, classes,
     saved_correct = {c: 0 for c in classes}
     saved_wrong = {c: 0 for c in classes}
 
-    print(f"Generating Grad-CAM++ heatmaps for {out_name}...")
+    print(f"\n[>] Ti\u1ebfn h\u00e0nh t\u1ea1o b\u1ea3n \u0111\u1ed3 nhi\u1ec7t cho: {out_name}")
     
-    for class_idx, class_name in enumerate(classes):
+    # Thêm thanh tr\u1ea1ng thái tổng quát cho các class
+    pbar_classes = tqdm(classes, desc="Ti\u1ebfn \u0111\u1ed9 các l\u1edbp b\u1ec7nh", position=0)
+    
+    for class_idx, class_name in enumerate(pbar_classes):
+        pbar_classes.set_postfix({'Current': class_name})
         class_dir = os.path.join(test_dir, class_name)
+        if not os.path.isdir(class_dir):
+            continue
+            
         images = [f for f in os.listdir(class_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
         
         for img_name in images:
@@ -173,6 +180,21 @@ def run_gradcam_for_model(model_name, weights_path, out_name, test_dir, classes,
     print(f"Done for {out_name}! Results saved in {out_base}")
 
 def main():
+    # ==========================================
+    # QUẢN LÝ NHANH BẰNG CODE (QUICK CONFIG)
+    # ==========================================
+    USE_CUSTOM_CONFIG = True
+    CUSTOM_DATASET = 'eval' # Chọn 'test' (ảnh sạch lab) hoặc 'eval' (ảnh hoang dã)
+    
+    # Danh sách các model muốn chạy cùng lúc. Cấu trúc: (tên_model, đường_dẫn_pth, tên_thư_mục_lưu_kết_quả)
+    CUSTOM_MODELS = [
+        ('convnext_tiny', 'checkpoints/convnext_tiny_best.pth', 'convnext_tiny_teacher'),
+        ('efficientnet_b0', 'checkpoints/efficientnet_b0_distilled_best.pth', 'efficientnet_b0_distilled'),
+        ('mobilenetv3_small_100', 'checkpoints/mobilenetv3_small_100_distilled_best.pth', 'mobilenetv3_small_distilled'),
+        # ('efficientnet_b0', 'checkpoints/efficientnet_b0_best.pth', 'efficientnet_b0_normal'), # Mở comment nếu muốn chạy thêm
+    ]
+    # ==========================================
+
     parser = argparse.ArgumentParser(description="Run Grad-CAM++ on test dataset")
     parser.add_argument('--config', type=str, default=None, help="Path to config file (e.g., configs/resnet50.yaml).")
     parser.add_argument('--weights', type=str, default=None, help="Path to trained weights (.pth file).")
@@ -194,52 +216,51 @@ def main():
         
     models_to_run = []
     
-    if args.config:
-        config = load_config(args.config)
-        model_name = config.get('model', {}).get('name', 'resnet50')
-        weights = args.weights
-        out_name = model_name
-        models_to_run.append((model_name, weights, out_name))
-    elif args.weights and not args.all:
-        model_name = infer_model_name(os.path.basename(args.weights))
-        out_name = os.path.splitext(os.path.basename(args.weights))[0]
-        models_to_run.append((model_name, args.weights, out_name))
-    elif args.all:
-        # Scan checkpoints dir
-        chk_dir = os.path.join(base_dir, args.checkpoints_dir)
-        if not os.path.exists(chk_dir):
-            print(f"Error: Checkpoints directory not found at {chk_dir}")
-            return
-            
-        print(f"Scanning checkpoints directory: {chk_dir}")
-        for f in os.listdir(chk_dir):
-            if f.endswith('.pth'):
-                model_name = infer_model_name(f)
-                weights = os.path.join(chk_dir, f)
-                out_name = os.path.splitext(f)[0]
-                models_to_run.append((model_name, weights, out_name))
+    if USE_CUSTOM_CONFIG:
+        print(f"[*] Quick Config is ON. Generating Grad-CAM for {len(CUSTOM_MODELS)} models on '{CUSTOM_DATASET}' dataset.")
+        models_to_run = CUSTOM_MODELS
     else:
-        print("Please provide --config, --weights, or use the --all flag to scan the checkpoints directory.")
-        return
+        if args.config:
+            config = load_config(args.config)
+            model_name = config.get('model', {}).get('name', 'resnet50')
+            weights = args.weights
+            out_name = model_name
+            models_to_run.append((model_name, weights, out_name))
+        elif args.weights and not args.all:
+            model_name = infer_model_name(os.path.basename(args.weights))
+            out_name = os.path.splitext(os.path.basename(args.weights))[0]
+            models_to_run.append((model_name, args.weights, out_name))
+        elif args.all:
+            # Scan checkpoints dir
+            chk_dir = os.path.join(base_dir, args.checkpoints_dir)
+            if not os.path.exists(chk_dir):
+                print(f"Error: Checkpoints directory not found at {chk_dir}")
+                return
+                
+            print(f"Scanning checkpoints directory: {chk_dir}")
+            for f in os.listdir(chk_dir):
+                if f.endswith('.pth'):
+                    model_name = infer_model_name(f)
+                    weights = os.path.join(chk_dir, f)
+                    out_name = os.path.splitext(f)[0]
+                    models_to_run.append((model_name, weights, out_name))
+        else:
+            print("Please provide --config, --weights, or use the --all flag.")
+            return
 
     # Dataset path
     test_dir = args.test_dir
-    if not test_dir:
-        # Try to read from default config
-        default_cfg_path = os.path.join(base_dir, 'configs', 'default.yaml')
-        if os.path.exists(default_cfg_path):
-            config = load_config(default_cfg_path)
-            test_dir = config.get('data', {}).get('test_dir', 'data/new_processed/test')
-            test_dir = os.path.join(base_dir, test_dir)
+    if USE_CUSTOM_CONFIG:
+        if CUSTOM_DATASET == 'eval':
+            test_dir = os.path.join(base_dir, 'data', 'new-data', 'eval')
         else:
-            test_dir = os.path.join(base_dir, 'data', 'new_processed', 'test')
+            test_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'test')
+    elif not test_dir:
+        test_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'test')
             
     if not os.path.exists(test_dir):
-        # Fallback to the user's latest path if data/new_processed/test doesn't exist
-        test_dir = os.path.join(base_dir, '..', 'data+source', 'data+source', 'new-data', 'test')
-        if not os.path.exists(test_dir):
-            print(f"Error: Test directory not found at {test_dir}")
-            return
+        print(f"Error: Test directory not found at {test_dir}")
+        return
             
     print(f"Scanning test directory: {test_dir}")
     classes = sorted([d for d in os.listdir(test_dir) if os.path.isdir(os.path.join(test_dir, d))])
@@ -249,9 +270,11 @@ def main():
         
     for model_name, weights, out_name in models_to_run:
         print(f"\n{'='*60}")
-        print(f"Starting Grad-CAM generation for {out_name}")
+        print(f"  [STARTING] MÔ HÌNH: {model_name.upper()} ")
         print(f"{'='*60}")
         run_gradcam_for_model(model_name, weights, out_name, test_dir, classes, device, base_dir, args)
+        
+    print("\n[+] HOÀN TẤT TẤT CẢ CÁC MÔ HÌNH! HÃY MỞ THƯ MỤC results/gradcam ĐỂ XEM KẾT QUẢ.")
 
 if __name__ == '__main__':
     main()
