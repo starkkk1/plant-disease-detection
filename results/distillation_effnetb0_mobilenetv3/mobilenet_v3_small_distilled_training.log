@@ -1,0 +1,6 @@
+2026-06-22 12:53:04,999 - INFO - Starting Knowledge Distillation.
+2026-06-22 12:53:05,000 - INFO - Teacher: convnext_tiny
+2026-06-22 12:53:05,000 - INFO - Student: mobilenet_v3_small
+2026-06-22 12:53:05,082 - INFO - Using device: cuda
+2026-06-22 12:53:05,307 - INFO - Loading Teacher model...
+2026-06-22 12:53:05,806 - INFO - Loading Student model...

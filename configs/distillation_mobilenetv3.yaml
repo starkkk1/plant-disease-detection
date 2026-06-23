@@ -1,6 +1,6 @@
 defaults: configs/default.yaml
 model:
-  name: mobilenet_v3_small
+  name: mobilenetv3_small_100
   pretrained: true
 distillation:
   teacher_model: convnext_tiny
