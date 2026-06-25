@@ -101,28 +101,14 @@ export default function Home() {
     }
   };
 
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
 
   const hasContent = !!(results || searchResults || error);
 
   return (
     <main className="min-h-screen bg-slate-950 text-slate-200 p-8 font-sans flex flex-col items-center overflow-x-hidden relative">
       
-      {/* Dynamic Cursor Glow */}
-      <div 
-        className="pointer-events-none fixed inset-0 z-0 transition-all duration-300 ease-out"
-        style={{
-          background: `radial-gradient(800px circle at ${mousePos.x}px ${mousePos.y}px, rgba(16,185,129,0.12), transparent 80%)`
-        }}
-      />
+
 
       <div className="z-10 w-full flex flex-col items-center">
         {/* Header */}
@@ -141,7 +127,7 @@ export default function Home() {
       <div className="w-full max-w-6xl grid lg:grid-cols-2 gap-8 items-stretch pb-20">
         {/* Upload Section */}
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-2xl relative overflow-hidden group flex flex-col">
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           
           <h2 className="text-2xl font-bold mb-6 text-white flex items-center gap-2">
             <UploadCloud className="text-emerald-400" /> Upload Leaf

@@ -7,16 +7,16 @@ from tqdm import tqdm
 # Đảm bảo import được src
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from src.models.mobilenet_encoder import MobilenetEncoder
+from src.models.efficientnet_encoder import EfficientNetEncoder
 from src.search.qdrant_engine import MultimodalSearchEngine
 
 def build_index(data_dir: str, collection_name: str, batch_size: int = 64):
     print(f"Initializing models...")
-    encoder = MobilenetEncoder()
+    encoder = EfficientNetEncoder()
     engine = MultimodalSearchEngine()
     
-    # Vector size của MobileNetV3 (từ MobilenetEncoder) là 1024
-    engine.create_collection(collection_name=collection_name, vector_size=1024)
+    # Vector size của EfficientNet-B0 là 1280
+    engine.create_collection(collection_name=collection_name, vector_size=1280)
     
     valid_extensions = ('.jpg', '.jpeg', '.png', '.bmp', '.webp')
     image_paths = []
@@ -65,13 +65,13 @@ def build_index(data_dir: str, collection_name: str, batch_size: int = 64):
                 payloads=valid_payloads
             )
 
-    print("Finished building index!")
+    print(f"Finished building index! Collection '{collection_name}' contains {len(image_paths)} points.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Build Qdrant Index for Plant Disease Detection")
+    parser = argparse.ArgumentParser(description="Build Qdrant Index for Plant Disease Detection using EfficientNet")
     parser.add_argument("--data_dir", type=str, default=r"d:\Code\python\data\new-data-removal", 
                         help="Đường dẫn đến thư mục chứa dữ liệu hình ảnh")
-    parser.add_argument("--collection", type=str, default="tomato_disease_multimodal", 
+    parser.add_argument("--collection", type=str, default="tomato_disease_efficientnet", 
                         help="Tên Qdrant collection")
     parser.add_argument("--batch_size", type=int, default=64, 
                         help="Kích thước batch để xử lý song song trên GPU")
