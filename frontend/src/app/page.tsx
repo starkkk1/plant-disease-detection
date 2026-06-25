@@ -261,6 +261,30 @@ export default function Home() {
                           style={{ width: `${percent}%` }}
                         />
                       </div>
+                      
+                      {isTop && res.gradcam_path && (
+                        <div className="mt-6 rounded-2xl overflow-hidden border border-emerald-500/30 relative w-full aspect-video bg-black/60 group shadow-lg">
+                           <div className="absolute inset-0 flex items-center justify-center text-slate-600 z-0">
+                              <Loader2 className="animate-spin w-8 h-8" />
+                           </div>
+                           <img 
+                              src={`http://127.0.0.1:8000/image?path=${encodeURIComponent(res.gradcam_path)}`} 
+                              alt="Grad-CAM++ Heatmap" 
+                              className="w-full h-full object-cover relative z-10 opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                           />
+                           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent p-4 z-20 pointer-events-none">
+                             <p className="text-emerald-300 text-sm font-semibold flex items-center gap-2">
+                               <Info className="w-4 h-4"/> Grad-CAM++ Attention Map
+                             </p>
+                             <p className="text-slate-400 text-xs mt-1">
+                               Vùng màu đỏ/cam là khu vực AI tập trung nhìn vào để chẩn đoán.
+                             </p>
+                           </div>
+                        </div>
+                      )}
                     </div>
                   );
                 })}

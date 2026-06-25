@@ -3,6 +3,13 @@ import timm
 from PIL import Image
 from torchvision import transforms
 import torch.nn.functional as F
+import os
+import uuid
+import numpy as np
+import cv2
+from pytorch_grad_cam import GradCAMPlusPlus
+from pytorch_grad_cam.utils.image import show_cam_on_image
+from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
 
 class PlantDiseasePredictor:
     def __init__(self, model_path: str = "", model_name: str = "", num_classes: int = 11):
@@ -84,15 +91,50 @@ class PlantDiseasePredictor:
             top_probs = top_probs.cpu().numpy()
             top_indices = top_indices.cpu().numpy()
             
-            results = []
-            for i in range(top_k):
-                idx = int(top_indices[i])
-                class_name = self.class_names[idx] if idx < len(self.class_names) else f"Class_{idx}"
-                if class_name == "unknown":
-                    class_name = "Mô hình chưa được học về bệnh này"
-                results.append({
-                    "class_name": class_name,
-                    "probability": float(top_probs[i])
-                })
+        # Sinh ảnh GradCAM++ cho top 1
+        gradcam_path = None
+        try:
+            target_layers = None
+            if hasattr(self.model, 'blocks'):
+                target_layers = [self.model.blocks[-1]]
+            elif hasattr(self.model, 'conv_head'):
+                target_layers = [self.model.conv_head]
+            elif hasattr(self.model, 'layer4'):
+                target_layers = [self.model.layer4[-1]]
+            
+            if target_layers:
+                cam = GradCAMPlusPlus(model=self.model, target_layers=target_layers)
+                targets = [ClassifierOutputTarget(int(top_indices[0]))]
+                grayscale_cam = cam(input_tensor=input_tensor, targets=targets)[0, :]
                 
-            return results
+                rgb_img = np.float32(image) / 255.0
+                rgb_img = cv2.resize(rgb_img, (224, 224))
+                
+                visualization = show_cam_on_image(rgb_img, grayscale_cam, use_rgb=True)
+                
+                os.makedirs("data/tmp", exist_ok=True)
+                gradcam_filename = f"gradcam_{uuid.uuid4().hex}.jpg"
+                gradcam_filepath = os.path.abspath(os.path.join("data/tmp", gradcam_filename))
+                
+                cv2.imwrite(gradcam_filepath, cv2.cvtColor(visualization, cv2.COLOR_RGB2BGR))
+                gradcam_path = gradcam_filepath
+        except Exception as e:
+            print(f"Lỗi khi tạo Grad-CAM++: {e}")
+            
+        results = []
+        for i in range(top_k):
+            idx = int(top_indices[i])
+            class_name = self.class_names[idx] if idx < len(self.class_names) else f"Class_{idx}"
+            if class_name == "unknown":
+                class_name = "Mô hình chưa được học về bệnh này"
+                
+            res_item = {
+                "class_name": class_name,
+                "probability": float(top_probs[i])
+            }
+            if i == 0 and gradcam_path:
+                res_item["gradcam_path"] = gradcam_path
+                
+            results.append(res_item)
+            
+        return results
