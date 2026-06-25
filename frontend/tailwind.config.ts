@@ -19,8 +19,8 @@ const config: Config = {
         }
       },
       animation: {
-        'fade-in-down': 'fade-in-down 0.8s ease-out',
-        'fade-in-up': 'fade-in-up 0.8s ease-out forwards',
+        'fade-in-down': 'fade-in-down 0.8s ease-out both',
+        'fade-in-up': 'fade-in-up 0.8s ease-out both',
       }
     },
   },

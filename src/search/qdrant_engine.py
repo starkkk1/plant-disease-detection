@@ -1,13 +1,20 @@
 import os
 import uuid
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, VectorParams, PointStruct
+try:
+    from qdrant_client import QdrantClient
+    from qdrant_client.http.models import Distance, VectorParams, PointStruct
+    QDRANT_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: qdrant_client could not be imported: {e}")
+    QDRANT_AVAILABLE = False
 
 class MultimodalSearchEngine:
     def __init__(self, db_path: str = "data/qdrant_db"):
         """
         Khởi tạo kết nối Qdrant Client (local file-based).
         """
+        if not QDRANT_AVAILABLE:
+            raise RuntimeError("qdrant_client is not available due to an import error.")
         os.makedirs(db_path, exist_ok=True)
         self.client = QdrantClient(path=db_path)
         print(f"Connected to Qdrant at {db_path}")

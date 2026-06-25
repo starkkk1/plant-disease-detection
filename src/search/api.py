@@ -1,6 +1,7 @@
 import os
 import sys
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import shutil
 import tempfile
@@ -35,7 +36,13 @@ async def startup_event():
     global encoder, engine, predictor
     print("Loading models... (This might take a few seconds)")
     encoder = MultimodalEncoder()
-    engine = MultimodalSearchEngine()
+    
+    try:
+        engine = MultimodalSearchEngine()
+        print("Qdrant Search Engine loaded successfully!")
+    except Exception as e:
+        print(f"Warning: Could not initialize Qdrant Engine (Search will be disabled). Error: {e}")
+        engine = None
     
     # Khởi tạo Inference Model (để trống path và name theo yêu cầu người dùng)
     # TODO: Điền model_path (vd: "checkpoints/mobilenet_v3_small_best.pth")
@@ -184,3 +191,13 @@ async def predict_disease(file: UploadFile = File(...), top_k: int = Form(3)):
         if 'temp_path' in locals() and os.path.exists(temp_path):
             os.remove(temp_path)
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/image")
+async def get_image(path: str):
+    """
+    Endpoint trả về file ảnh thật dựa trên đường dẫn tuyệt đối (hoặc tương đối) 
+    để Frontend có thể hiển thị được kết quả tìm kiếm.
+    """
+    if not os.path.exists(path):
+        raise HTTPException(status_code=404, detail="Image not found")
+    return FileResponse(path)
