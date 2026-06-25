@@ -49,6 +49,39 @@ class MultimodalEncoder:
             
         return image_features.cpu().numpy()[0]
 
+    def encode_images_batch(self, image_paths: list) -> np.ndarray:
+        """
+        Encode một batch hình ảnh để tăng tốc độ trên GPU.
+        """
+        images = []
+        valid_indices = []
+        for i, path in enumerate(image_paths):
+            try:
+                images.append(Image.open(path).convert("RGB"))
+                valid_indices.append(i)
+            except Exception as e:
+                print(f"Error opening image {path}: {e}")
+                
+        if not images:
+            return None
+            
+        inputs = self.clip_processor(images=images, return_tensors="pt").to(self.device)
+        with torch.no_grad():
+            vision_outputs = self.clip_model.vision_model(pixel_values=inputs["pixel_values"])
+            pooled_output = vision_outputs.pooler_output
+            image_features = self.clip_model.visual_projection(pooled_output)
+            # Normalize vector
+            image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
+            
+        embeddings = image_features.cpu().numpy()
+        
+        # Trả về mảng cùng kích thước ban đầu, None cho ảnh lỗi
+        result = [None] * len(image_paths)
+        for idx, emb in zip(valid_indices, embeddings):
+            result[idx] = emb
+            
+        return result
+
     def encode_text(self, text: str) -> np.ndarray:
         """
         Encode văn bản (Tiếng Việt, Tiếng Anh...) thành vector embedding.
