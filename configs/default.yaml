@@ -5,18 +5,18 @@ project:
 
 data:
   raw_root: data/raw/plant-disease-dataset
-  processed_root: data/processed/tomato
-  train_dir: data/processed/tomato/train
-  val_dir: data/processed/tomato/val
-  test_dir: data/processed/tomato/test
-  class_map: data/processed/tomato/class_to_idx.json
+  processed_root: data/plantvillage_tomato_full
+  train_dir: data/new-data-removal/train
+  val_dir: data/new-data-removal/val
+  test_dir: data/new-data-removal/test
+  class_map: data/new-data-removal/class_to_idx.json
   image_size: 224
   batch_size: 32
   num_workers: 4
 
 model:
   name: resnet50
-  num_classes: 10
+  num_classes: 11
   pretrained: true
 
 training:
@@ -34,5 +34,5 @@ training:
 
 output:
   checkpoint_dir: checkpoints
-  results_dir: results
+  results_dir: results/distillation_effnetb0_mobilenetv3
   reports_dir: reports

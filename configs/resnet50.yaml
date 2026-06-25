@@ -1,3 +1,0 @@
-defaults: configs/default.yaml
-model:
-  name: resnet50

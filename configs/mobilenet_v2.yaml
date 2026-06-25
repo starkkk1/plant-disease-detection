@@ -1,3 +1,0 @@
-defaults: configs/default.yaml
-model:
-  name: mobilenet_v2
