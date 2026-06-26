@@ -13,6 +13,7 @@ venv/
 # Data and model artifacts
 data/
 checkpoints/
+results/
 *.pt
 *.pth
 *.ckpt
