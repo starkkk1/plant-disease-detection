@@ -56,8 +56,9 @@ async def startup_event():
         engine = None
     
     # Khởi tạo Inference Model
+    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
     predictor = PlantDiseasePredictor(
-        model_path="checkpoints/efficientnet_b0_distilled_best.pth",
+        model_path=os.path.join(base_dir, "checkpoints", "efficientnet_b0_distilled_best.pth"),
         model_name="efficientnet_b0"
     )
     
