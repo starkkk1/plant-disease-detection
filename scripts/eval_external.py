@@ -10,7 +10,9 @@ import torch
 import torch.nn as nn
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
+import matplotlib.pyplot as plt
+import seaborn as sns
 import timm
 
 def infer_config_name(ckpt_name):
@@ -71,7 +73,7 @@ def validate(model, dataloader, criterion, device):
     precision = precision_score(all_targets, all_preds, average='macro', zero_division=0)
     recall = recall_score(all_targets, all_preds, average='macro', zero_division=0)
     
-    return epoch_loss, acc, f1, precision, recall
+    return epoch_loss, acc, f1, precision, recall, all_targets, all_preds
 
 def get_mapped_dataset(eval_dir, train_class_to_idx, transform):
     dataset = datasets.ImageFolder(eval_dir, transform=transform)
@@ -129,7 +131,7 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
         tv_dataset = get_mapped_dataset(tv_dir, train_class_to_idx, test_transform)
         if len(tv_dataset) > 0:
             tv_loader = DataLoader(tv_dataset, batch_size=32, shuffle=False)
-            tv_loss, tv_acc, tv_f1, tv_prec, tv_rec = validate(model, tv_loader, criterion, device)
+            tv_loss, tv_acc, tv_f1, tv_prec, tv_rec, _, _ = validate(model, tv_loader, criterion, device)
             print(f"{model_name} new-data Eval -> Loss: {tv_loss:.4f} | Acc: {tv_acc:.4f} | F1: {tv_f1:.4f}\n")
         else:
             print("No valid classes found to evaluate.\n")
@@ -139,8 +141,30 @@ def evaluate_model(model_cfg_name, base_dir, device, train_class_to_idx, test_tr
         print(f"--- Evaluating {model_name} on Test set ---")
         test_dataset = datasets.ImageFolder(test_dir, transform=test_transform)
         test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
-        test_loss, test_acc, test_f1, test_prec, test_rec = validate(model, test_loader, criterion, device)
+        test_loss, test_acc, test_f1, test_prec, test_rec, test_targets, test_preds = validate(model, test_loader, criterion, device)
         print(f"{model_name} Test -> Loss: {test_loss:.4f} | Acc: {test_acc:.4f} | F1: {test_f1:.4f}\n")
+        
+        # Vẽ và lưu Confusion Matrix
+        cm = confusion_matrix(test_targets, test_preds)
+        plt.figure(figsize=(10, 8))
+        
+        # Lấy tên class từ dict train_class_to_idx
+        idx_to_class = {v: k for k, v in train_class_to_idx.items()}
+        class_names = [idx_to_class[i] for i in range(len(idx_to_class))]
+        
+        sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=class_names, yticklabels=class_names)
+        plt.ylabel('Thực tế (Actual)')
+        plt.xlabel('Dự đoán (Predicted)')
+        plt.title(f'Confusion Matrix - {model_cfg_name}')
+        plt.tight_layout()
+        
+        cm_filename = f"confusion_matrix_{model_cfg_name}.png"
+        cm_dir = os.path.join(base_dir, 'results', 'confusion_matrix')
+        os.makedirs(cm_dir, exist_ok=True)
+        cm_path = os.path.join(cm_dir, cm_filename)
+        plt.savefig(cm_path)
+        plt.close()
+        print(f"[*] Đã lưu Confusion Matrix tại: {cm_path}\n")
         
     print("="*60)
 
@@ -222,6 +246,13 @@ def main():
     
     print(f"Found {len(train_class_to_idx)} training classes.")
     print("="*60)
+    
+    # Xoá toàn bộ ảnh cũ trong thư mục confusion_matrix trước khi chạy mới
+    cm_dir = os.path.join(base_dir, 'results', 'confusion_matrix')
+    if os.path.exists(cm_dir):
+        import shutil
+        shutil.rmtree(cm_dir)
+    os.makedirs(cm_dir, exist_ok=True)
     
     for idx, model_name in enumerate(models_to_run):
         ckpt_path = ckpt_to_use_list[idx]

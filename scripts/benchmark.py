@@ -27,7 +27,7 @@ def benchmark_model(model_name, num_classes=11, device='cpu', batch_size=1):
         torch.cuda.synchronize()
     start_time = time.time()
     
-    num_iterations = 100
+    num_iterations = 1000
     with torch.no_grad():
         for _ in range(num_iterations):
             _ = model(dummy_input)
