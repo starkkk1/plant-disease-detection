@@ -37,3 +37,15 @@ python scripts/run_gradcam.py
 **Outputs:** 
 - Heatmap images saved in `results/gradcam/`.
 - The images are categorized by model and separated into folders based on prediction correctness (e.g., `per_class`, `correct`, `wrong`).
+
+## 5. Build Qdrant Search Index (Vector Database)
+To encode the dataset and push vectors into Qdrant for semantic search:
+```bash
+# For MobileNetV3 (Default)
+python scripts/build_qdrant_index.py --model mobilenet
+
+# For EfficientNet-B0
+python scripts/build_qdrant_index.py --model efficientnet
+```
+**Outputs:** 
+- Prints extraction progress and creates collections (`tomato_disease_multimodal` or `tomato_disease_efficientnet`) inside your Qdrant container.
