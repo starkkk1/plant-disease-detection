@@ -197,7 +197,8 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args, cross_mode
         print(f"Error getting Grad-CAM target layers: {e}")
         return
         
-    out_base = Path(base_dir) / 'results' / 'gradcam' / model_cfg_name
+    gradcam_dir_name = 'gradcam_eval' if args.dataset == 'eval' else 'gradcam'
+    out_base = Path(base_dir) / 'results' / gradcam_dir_name / model_cfg_name
     dir_correct = out_base / 'correct'
     dir_wrong = out_base / 'wrong'
     dir_per_class = out_base / 'per_class'
@@ -266,7 +267,8 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args, cross_mode
                 
     # Cross-Model Generation
     if cross_model_anchors:
-        dir_global_cross = Path(base_dir) / 'results' / 'gradcam' / 'cross_model_comparison'
+        gradcam_dir_name = 'gradcam_eval' if args.dataset == 'eval' else 'gradcam'
+        dir_global_cross = Path(base_dir) / 'results' / gradcam_dir_name / 'cross_model_comparison'
         dir_global_cross.mkdir(parents=True, exist_ok=True)
         for class_name, img_path in cross_model_anchors.items():
             img_rgb = np.array(Image.open(img_path).convert('RGB'))
@@ -301,7 +303,8 @@ def main():
     if os.path.exists(cm_dir): shutil.rmtree(cm_dir, ignore_errors=True)
     
     if not args.skip_gradcam:
-        gradcam_dir = os.path.join(base_dir, 'results', 'gradcam')
+        gradcam_dir_name = 'gradcam_eval' if args.dataset == 'eval' else 'gradcam'
+        gradcam_dir = os.path.join(base_dir, 'results', gradcam_dir_name)
         if os.path.exists(gradcam_dir): shutil.rmtree(gradcam_dir, ignore_errors=True)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
