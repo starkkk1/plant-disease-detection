@@ -276,10 +276,16 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args, cross_mode
             img_viz = np.float32(img_resized) / 255.0
             input_tensor = preprocess_image(img_viz, mean=mean, std=std).to(device)
             try:
+                with torch.no_grad():
+                    output = model(input_tensor)
+                    probs = F.softmax(output, dim=1)
+                    pred_conf, pred_idx = torch.max(probs, dim=1)
+                    pred_class = classes[pred_idx.item()]
+                    
                 grayscale_cam = generate_cam(model, target_layers, input_tensor)
                 cam_image = show_cam_on_image(img_viz, grayscale_cam, use_rgb=True)
                 cam_image_bgr = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
-                out_filename = f"{class_name}__model_{model_cfg_name}.png"
+                out_filename = f"true_{class_name}__pred_{pred_class}__model_{model_cfg_name}.png"
                 cv2.imwrite(str(dir_global_cross / out_filename), cam_image_bgr)
             except Exception:
                 continue
