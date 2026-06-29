@@ -12,14 +12,15 @@ Ensure your virtual environment is activated and dependencies are installed.
 pip install -r requirements.txt
 ```
 
-## 2. Evaluation & Confusion Matrix
-To evaluate all trained models on the test set and automatically generate Confusion Matrices:
+## 2. Evaluation, Confusion Matrix & Explainability (Grad-CAM)
+To evaluate all trained models on the test set, automatically generate Confusion Matrices, and generate visual heatmaps (Grad-CAM):
 ```bash
-python scripts/eval_external.py
+python scripts/evaluate.py
 ```
 **Outputs:** 
 - Metrics (Loss, Accuracy, F1, Precision, Recall) will be printed directly in the terminal.
 - Confusion Matrix images (`.png`) are automatically saved in the `results/confusion_matrix/` directory.
+- Grad-CAM Heatmap images are saved in `results/gradcam/`, categorized by model and separated into folders based on prediction correctness (e.g., `per_class`, `correct`, `wrong`).
 
 ## 3. Benchmarking (Latency & Size)
 To measure model size (MB), parameter count (M), and inference latency (ms) on CPU:
@@ -29,16 +30,7 @@ python scripts/benchmark.py
 **Outputs:** 
 - A formatted table printed in the terminal comparing Teacher and Student models.
 
-## 4. Explainability (Grad-CAM)
-To generate visual heatmaps showing what the models are focusing on when making predictions:
-```bash
-python scripts/run_gradcam.py
-```
-**Outputs:** 
-- Heatmap images saved in `results/gradcam/`.
-- The images are categorized by model and separated into folders based on prediction correctness (e.g., `per_class`, `correct`, `wrong`).
-
-## 5. Build Qdrant Search Index (Vector Database)
+## 4. Build Qdrant Search Index (Vector Database)
 To encode the dataset and push vectors into Qdrant for semantic search:
 ```bash
 # For MobileNetV3 (Default)
