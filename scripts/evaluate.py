@@ -111,7 +111,7 @@ def generate_cam(model, target_layers, img_tensor):
     return grayscale_cam[0, :]
 
 # ----------------- RUN PIPELINE -----------------
-def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args):
+def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args, cross_model_anchors=None):
     ckpt_path = os.path.join(base_dir, 'checkpoints', ckpt_filename)
     model_cfg_name = infer_config_name(ckpt_filename)
     timm_model_name = infer_model_name(ckpt_filename)
@@ -136,16 +136,12 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args):
         
     criterion = nn.CrossEntropyLoss()
     
-    # Dataset setup
-    test_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'test')
-    if args.dataset == 'eval':
-        test_dir = os.path.join(base_dir, 'data', 'new-data-removal', 'eval')
-        
-    if not os.path.exists(test_dir):
-        print(f"Test directory not found: {test_dir}")
+    target_dir = os.path.join(base_dir, 'data', 'new-data-removal', args.dataset)
+    if not os.path.exists(target_dir):
+        print(f"Target directory not found: {target_dir}")
         return
         
-    classes = sorted([d for d in os.listdir(test_dir) if os.path.isdir(os.path.join(test_dir, d))])
+    classes = sorted([d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d))])
     
     test_transform = transforms.Compose([
         transforms.Resize(256),
@@ -153,16 +149,29 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-    test_dataset = datasets.ImageFolder(test_dir, transform=test_transform)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
     
-    # 1. EVALUATION
-    print(f"--- Evaluating {model_cfg_name} on {args.dataset.upper()} set ---")
-    test_loss, test_acc, test_f1, test_prec, test_rec, test_targets, test_preds = validate(model, test_loader, criterion, device)
-    print(f"{model_cfg_name} Test -> Loss: {test_loss:.4f} | Acc: {test_acc:.4f} | F1: {test_f1:.4f}\n")
+    # 1. EVALUATION (Eval on both 'eval' and 'test' sets)
+    cm_targets, cm_preds = [], []
+    for split_name in ['eval', 'test']:
+        split_dir = os.path.join(base_dir, 'data', 'new-data-removal', split_name)
+        if not os.path.exists(split_dir):
+            continue
+            
+        split_dataset = datasets.ImageFolder(split_dir, transform=test_transform)
+        split_loader = DataLoader(split_dataset, batch_size=32, shuffle=False)
+        
+        print(f"--- Evaluating {model_cfg_name} on {split_name.upper()} set ---")
+        l_loss, l_acc, l_f1, l_prec, l_rec, l_targets, l_preds = validate(model, split_loader, criterion, device)
+        print(f"{model_cfg_name} {split_name.capitalize()} -> Loss: {l_loss:.4f} | Acc: {l_acc:.4f} | F1: {l_f1:.4f}\n")
+        
+        if split_name == args.dataset:
+            cm_targets = l_targets
+            cm_preds = l_preds
+            # Rename test_dir for Grad-CAM logic below to use the target dataset
+            test_dir = split_dir
     
     # Confusion Matrix
-    cm = confusion_matrix(test_targets, test_preds)
+    cm = confusion_matrix(cm_targets, cm_preds)
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
     plt.ylabel('Thực tế (Actual)')
@@ -254,6 +263,25 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args):
                 
             if saved_correct[class_name] == 1:
                 cv2.imwrite(str(dir_per_class / out_filename), cam_image_bgr)
+                
+    # Cross-Model Generation
+    if cross_model_anchors:
+        dir_global_cross = Path(base_dir) / 'results' / 'gradcam' / 'cross_model_comparison'
+        dir_global_cross.mkdir(parents=True, exist_ok=True)
+        for class_name, img_path in cross_model_anchors.items():
+            img_rgb = np.array(Image.open(img_path).convert('RGB'))
+            img_resized = cv2.resize(img_rgb, (224, 224))
+            img_viz = np.float32(img_resized) / 255.0
+            input_tensor = preprocess_image(img_viz, mean=mean, std=std).to(device)
+            try:
+                grayscale_cam = generate_cam(model, target_layers, input_tensor)
+                cam_image = show_cam_on_image(img_viz, grayscale_cam, use_rgb=True)
+                cam_image_bgr = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
+                out_filename = f"{class_name}__model_{model_cfg_name}.png"
+                cv2.imwrite(str(dir_global_cross / out_filename), cam_image_bgr)
+            except Exception:
+                continue
+
     print(f"[*] Đã lưu Grad-CAM cho {model_cfg_name}.")
 
 def main():
@@ -285,10 +313,21 @@ def main():
         
     ckpt_files = [f for f in os.listdir(chk_dir) if f.endswith('.pth') and 'cyclegan' not in f.lower()]
     
+    # Pre-select cross-model anchor images (1 per class)
+    cross_model_anchors = {}
+    test_dir_path = os.path.join(base_dir, 'data', 'new-data-removal', args.dataset)
+    if os.path.exists(test_dir_path):
+        classes = sorted([d for d in os.listdir(test_dir_path) if os.path.isdir(os.path.join(test_dir_path, d))])
+        for c in classes:
+            c_dir = os.path.join(test_dir_path, c)
+            imgs = [f for f in os.listdir(c_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            if imgs:
+                cross_model_anchors[c] = os.path.join(c_dir, imgs[0])
+    
     print(f"\n[*] Bắt đầu đánh giá {len(ckpt_files)} models...")
     for idx, f in enumerate(ckpt_files):
         print(f"\n{'='*80}\n[{idx+1}/{len(ckpt_files)}] Đang xử lý: {f}\n{'='*80}")
-        run_evaluation_and_gradcam(f, base_dir, device, args)
+        run_evaluation_and_gradcam(f, base_dir, device, args, cross_model_anchors)
         
     print("\n[+] HOÀN TẤT! Kết quả đã được lưu trong thư mục results/")
 
