@@ -15,7 +15,14 @@ pip install -r requirements.txt
 ## 2. Evaluation, Confusion Matrix & Explainability (Grad-CAM)
 To evaluate all trained models on the test set, automatically generate Confusion Matrices, and generate visual heatmaps (Grad-CAM):
 ```bash
+# Evaluate all models on test set (Default)
 python scripts/evaluate.py
+
+# Evaluate a specific model (e.g., convnext)
+python scripts/evaluate.py --model convnext
+
+# Evaluate a specific model on the 'eval' dataset instead of 'test'
+python scripts/evaluate.py --dataset eval --model resnet
 ```
 **Outputs:** 
 - Metrics (Loss, Accuracy, F1, Precision, Recall) will be printed directly in the terminal.

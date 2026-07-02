@@ -49,7 +49,7 @@ def infer_config_name(ckpt_name):
 def get_target_layer(model, model_name):
     model_name = model_name.lower()
     if 'convnext' in model_name:
-        return [model.stages[-1].blocks[-1]]
+        return [model.stages[-1].blocks[-1].conv_dw]
     elif 'resnet' in model_name:
         return [model.layer4[-1]]
     elif 'efficientnet' in model_name:
@@ -85,9 +85,12 @@ def validate(model, dataloader, criterion, device):
     
     with torch.no_grad():
         for inputs, targets in dataloader:
-            inputs, targets = inputs.to(device), targets.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, targets)
+            inputs, targets = inputs.to(device, non_blocking=True), targets.to(device, non_blocking=True)
+            
+            # Sử dụng Automatic Mixed Precision (FP16) để tăng tốc cho Tensor Cores trên RTX 2070 Super
+            with torch.cuda.amp.autocast():
+                outputs = model(inputs)
+                loss = criterion(outputs, targets)
             
             running_loss += loss.item() * inputs.size(0)
             _, preds = torch.max(outputs, 1)
@@ -158,7 +161,14 @@ def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args, cross_mode
             continue
             
         split_dataset = datasets.ImageFolder(split_dir, transform=test_transform)
-        split_loader = DataLoader(split_dataset, batch_size=32, shuffle=False)
+        # Tối ưu hóa DataLoader cho RTX 2070 Super: batch_size lớn hơn, num_workers, pin_memory
+        split_loader = DataLoader(
+            split_dataset, 
+            batch_size=128, 
+            shuffle=False, 
+            num_workers=4, 
+            pin_memory=True
+        )
         
         print(f"--- Evaluating {model_cfg_name} on {split_name.upper()} set ---")
         l_loss, l_acc, l_f1, l_prec, l_rec, l_targets, l_preds = validate(model, split_loader, criterion, device)
@@ -298,6 +308,7 @@ def main():
     parser.add_argument('--num_correct', type=int, default=5, help="Grad-CAM: number of correct predictions to save per class")
     parser.add_argument('--num_wrong', type=int, default=5, help="Grad-CAM: number of wrong predictions to save per class")
     parser.add_argument('--skip_gradcam', action='store_true', help="Skip Grad-CAM generation")
+    parser.add_argument('--model', type=str, default=None, help="Tên model cụ thể muốn chạy (vd: convnext). Nếu để trống sẽ chạy tất cả.")
     args = parser.parse_args()
 
     base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -314,13 +325,21 @@ def main():
         if os.path.exists(gradcam_dir): shutil.rmtree(gradcam_dir, ignore_errors=True)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    print(f"Using device: {device}")
+    if device.type == 'cuda':
+        torch.backends.cudnn.benchmark = True  # Kích hoạt cudnn benchmark để tăng tốc độ convolution
+    print(f"Using device: {device} (Optimized for RTX 2070 Super)")
     
     if not os.path.exists(chk_dir):
         print("Error: Checkpoints directory not found!")
         return
         
     ckpt_files = [f for f in os.listdir(chk_dir) if f.endswith('.pth') and 'cyclegan' not in f.lower()]
+    
+    if args.model:
+        ckpt_files = [f for f in ckpt_files if args.model.lower() in f.lower()]
+        if not ckpt_files:
+            print(f"Error: Không tìm thấy checkpoint nào khớp với từ khoá '{args.model}'")
+            return
     
     # Pre-select cross-model anchor images (1 per class)
     cross_model_anchors = {}
