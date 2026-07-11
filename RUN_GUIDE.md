@@ -12,6 +12,21 @@ Ensure your virtual environment is activated and dependencies are installed.
 pip install -r requirements.txt
 ```
 
+## 1.5. Training Models
+To train the Teacher model (ConvNeXt):
+```bash
+python scripts/train_convnext.py
+```
+
+To run Knowledge Distillation for both Student models (MobileNetV3 and EfficientNet-B0) sequentially:
+```bash
+python scripts/train_distillation.py --config configs/distillation_mobilenetv3.yaml && python scripts/train_distillation.py --config configs/distillation_effnetb0.yaml
+```
+**Outputs:**
+- Logs and metrics will be saved in `results/`.
+- Best model checkpoints will be saved in `checkpoints/`.
+
+
 ## 2. Evaluation, Confusion Matrix & Explainability (Grad-CAM)
 To evaluate all trained models on the test set, automatically generate Confusion Matrices, and generate visual heatmaps (Grad-CAM):
 ```bash
