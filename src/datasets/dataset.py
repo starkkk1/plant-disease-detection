@@ -7,9 +7,10 @@ from torchvision.datasets import ImageFolder
 from src.datasets.transforms import get_transforms
 
 class TomatoDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
+    def __init__(self, root_dir, transform=None, teacher_transform=None):
         self.image_folder = ImageFolder(root_dir)
         self.transform = transform
+        self.teacher_transform = teacher_transform
         self.classes = self.image_folder.classes
         self.class_to_idx = self.image_folder.class_to_idx
 
@@ -25,13 +26,25 @@ class TomatoDataset(Dataset):
             raise ValueError(f"Could not read image: {img_path}")
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
-        if self.transform:
-            augmented = self.transform(image=image)
-            image = augmented['image']
+        if self.teacher_transform is not None:
+            clean = self.teacher_transform(image=image)
+            clean_image = clean['image']
+            
+            if self.transform:
+                augmented = self.transform(image=image)
+                image_aug = augmented['image']
+            else:
+                image_aug = image
+                
+            return image_aug, clean_image, label
+        else:
+            if self.transform:
+                augmented = self.transform(image=image)
+                image = augmented['image']
 
-        return image, label
+            return image, label
 
-def get_dataloaders(config):
+def get_dataloaders(config, is_distillation=False):
     train_dir = config['data']['train_dir']
     val_dir = config['data']['val_dir']
     test_dir = config.get('data', {}).get('test_dir')
@@ -42,7 +55,11 @@ def get_dataloaders(config):
     train_transform = get_transforms(config, split="train")
     val_transform = get_transforms(config, split="val")
     
-    train_dataset = TomatoDataset(train_dir, transform=train_transform)
+    if is_distillation:
+        train_dataset = TomatoDataset(train_dir, transform=train_transform, teacher_transform=val_transform)
+    else:
+        train_dataset = TomatoDataset(train_dir, transform=train_transform)
+        
     val_dataset = TomatoDataset(val_dir, transform=val_transform)
     
     # Calculate class weights if needed

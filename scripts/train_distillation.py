@@ -80,18 +80,27 @@ def train_one_epoch(student, teacher, dataloader, criterion, optimizer, device, 
     teacher.eval() # Teacher is always in eval mode
     running_loss = 0.0
     
-    for inputs, targets in tqdm(dataloader, desc="Training"):
-        inputs, targets = inputs.to(device), targets.to(device)
+    for batch in tqdm(dataloader, desc="Training"):
+        if len(batch) == 3:
+            inputs, clean_inputs, targets = batch
+        else:
+            inputs, targets = batch
+            clean_inputs = inputs
+            
+        inputs = inputs.to(device)
+        clean_inputs = clean_inputs.to(device)
+        targets = targets.to(device)
         
+        # Teacher forward pass (no gradients, on clean images)
+        with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=device.type=='cuda'):
+            with torch.no_grad():
+                teacher_logits = teacher(clean_inputs)
+
         if mixup_fn is not None:
             inputs, targets = mixup_fn(inputs, targets)
             
         optimizer.zero_grad()
         with torch.autocast(device_type=device.type, dtype=torch.float16, enabled=device.type=='cuda'):
-            # Teacher forward pass (no gradients)
-            with torch.no_grad():
-                teacher_logits = teacher(inputs)
-            
             # Student forward pass
             student_logits = student(inputs)
             
@@ -168,7 +177,7 @@ def main():
         if key in config.get('data', {}):
             config['data'][key] = os.path.join(base_dir, config['data'][key])
             
-    loaders, class_weights = get_dataloaders(config)
+    loaders, class_weights = get_dataloaders(config, is_distillation=True)
     train_loader = loaders.get('train')
     val_loader = loaders.get('val')
     test_loader = loaders.get('test', val_loader)
