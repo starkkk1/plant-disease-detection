@@ -1,4 +1,5 @@
 __pycache__/
+.pytest_cache/
 *.pyc
 .env
 .venv/
@@ -23,3 +24,4 @@ outputs/
 *.md
 !README.md
 !RUN_GUIDE.md
+!docs/**/*.md

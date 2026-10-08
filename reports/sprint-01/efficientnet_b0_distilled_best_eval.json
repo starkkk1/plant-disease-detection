@@ -1,0 +1,707 @@
+{
+  "created_at_utc": "2026-10-08T08:39:55.800080+00:00",
+  "model_name": "efficientnet_b0",
+  "model_version": "efficientnet_b0:8cd4521c43c4",
+  "checkpoint": "D:\\Code\\python\\plant-disease-detection\\checkpoints\\efficientnet_b0_distilled_best.pth",
+  "checkpoint_sha256": "8cd4521c43c49a43df3c82f8928940baa4a54520a64dce8245dd8b535f1a6ac9",
+  "checkpoint_size_mib": 15.630270004272461,
+  "parameter_count": 4021639,
+  "class_names": [
+    "Tomato___Bacterial_spot",
+    "Tomato___Early_blight",
+    "Tomato___Late_blight",
+    "Tomato___Leaf_Mold",
+    "Tomato___Septoria_leaf_spot",
+    "Tomato___Spider_mites Two-spotted_spider_mite",
+    "Tomato___Target_Spot",
+    "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+    "Tomato___Tomato_mosaic_virus",
+    "Tomato___healthy",
+    "unknown"
+  ],
+  "class_map_sha256": "ff5c73e7a7e3e495593fa664b75ebc73de4c9a425f1d847351ae60bc1fbaa786",
+  "input_shape": [
+    1,
+    3,
+    224,
+    224
+  ],
+  "output_shape": [
+    1,
+    11
+  ],
+  "preprocessing": {
+    "resize": "OpenCV INTER_LINEAR, direct square resize",
+    "color": "RGB",
+    "dtype": "float32",
+    "mean": [
+      0.485,
+      0.456,
+      0.406
+    ],
+    "std": [
+      0.229,
+      0.224,
+      0.225
+    ]
+  },
+  "environment": {
+    "platform": "Windows-11-10.0.26300-SP0",
+    "processor": "AMD64 Family 25 Model 124 Stepping 0, AuthenticAMD",
+    "python": "3.14.5",
+    "torch": "2.12.0+cpu",
+    "device": "cpu",
+    "threads": 4,
+    "packages": {
+      "torchvision": "0.27.0",
+      "timm": "1.0.27",
+      "numpy": "2.4.6",
+      "Pillow": "12.2.0",
+      "scikit-learn": "1.8.0",
+      "PyYAML": "6.0.3"
+    }
+  },
+  "dataset": {
+    "root": "D:\\Code\\python\\plant-disease-detection\\data\\new-data-removal\\eval",
+    "sample_count": 67,
+    "class_counts": {
+      "Tomato___Bacterial_spot": 8,
+      "Tomato___Early_blight": 9,
+      "Tomato___Late_blight": 10,
+      "Tomato___Leaf_Mold": 5,
+      "Tomato___Septoria_leaf_spot": 10,
+      "Tomato___Spider_mites Two-spotted_spider_mite": 1,
+      "Tomato___Target_Spot": 1,
+      "Tomato___Tomato_Yellow_Leaf_Curl_Virus": 5,
+      "Tomato___Tomato_mosaic_virus": 9,
+      "Tomato___healthy": 8,
+      "unknown": 1
+    },
+    "manifest_sha256": "f7eae10ef959f6837e4d29982743bd14e519083ddd13a94e3a116374e33ba2c3"
+  },
+  "limit_per_class": null,
+  "metrics": {
+    "sample_count": 67,
+    "accuracy": 0.5522388059701493,
+    "macro_f1": 0.3960703411421115,
+    "macro_precision": 0.43795093795093804,
+    "macro_recall": 0.4126262626262626,
+    "macro_policy": "all training classes; zero_division=0, including absent classes",
+    "confusion_matrix": [
+      [
+        3,
+        1,
+        0,
+        0,
+        4,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        2,
+        6,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        8,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        1,
+        0,
+        2,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        1,
+        0,
+        0,
+        9,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        4,
+        0,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        2,
+        3,
+        0
+      ],
+      [
+        1,
+        0,
+        2,
+        1,
+        0,
+        0,
+        0,
+        1,
+        0,
+        3,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    ],
+    "predictions": [
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (2).jpg",
+        "target": 0,
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.5360275506973267
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (3).jpg",
+        "target": 0,
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.46859967708587646
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (4).jpg",
+        "target": 0,
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.4362727105617523
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (5).jpg",
+        "target": 0,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.5437624454498291
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (6).jpg",
+        "target": 0,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.5748405456542969
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (7).jpg",
+        "target": 0,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.7906865477561951
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (8).jpg",
+        "target": 0,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.36229363083839417
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Bacterial_spot\\pd_test_Tomato leaf bacterial spot (9).jpg",
+        "target": 0,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.7427432537078857
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (1).jpg",
+        "target": 1,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.2548702657222748
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (2).jpg",
+        "target": 1,
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.5394482016563416
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (3).jpg",
+        "target": 1,
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.37282589077949524
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (4).jpg",
+        "target": 1,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.5185036659240723
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (5).jpg",
+        "target": 1,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.7790271043777466
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (6).jpg",
+        "target": 1,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.8006699681282043
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (7).jpg",
+        "target": 1,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.6855713129043579
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (8).jpg",
+        "target": 1,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.39256560802459717
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Early_blight\\pd_test_Tomato Early blight leaf (9).jpg",
+        "target": 1,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.5526944398880005
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (1).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.7724332213401794
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (10).jpg",
+        "target": 2,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.4719288647174835
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (2).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.6591967344284058
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (3).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.8628120422363281
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (4).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.6467669606208801
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (5).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.7894019484519958
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (6).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.5108123421669006
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (7).jpg",
+        "target": 2,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.3254927396774292
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (8).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.5926064848899841
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Late_blight\\pd_test_Tomato leaf late blight (9).jpg",
+        "target": 2,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.8494644165039062
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Leaf_Mold\\pd_test_Tomato mold leaf (1).jpg",
+        "target": 3,
+        "class_id": 10,
+        "label": "unknown",
+        "confidence": 0.47469398379325867
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Leaf_Mold\\pd_test_Tomato mold leaf (2).jpg",
+        "target": 3,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.4455815851688385
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Leaf_Mold\\pd_test_Tomato mold leaf (4).jpg",
+        "target": 3,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.36352860927581787
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Leaf_Mold\\pd_test_Tomato mold leaf (5).jpg",
+        "target": 3,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.8653613924980164
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Leaf_Mold\\pd_test_Tomato mold leaf (6).jpg",
+        "target": 3,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.39030978083610535
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (10).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.574440062046051
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (11).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.6671509742736816
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (2).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.8359174728393555
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (3).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.6829106211662292
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (4).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.44163283705711365
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (5).jpg",
+        "target": 4,
+        "class_id": 1,
+        "label": "Tomato___Early_blight",
+        "confidence": 0.4212607741355896
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (6).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.6802243590354919
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (7).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.5718501210212708
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (8).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.4736524224281311
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Septoria_leaf_spot\\pd_test_Tomato Septoria leaf spot (9).jpg",
+        "target": 4,
+        "class_id": 4,
+        "label": "Tomato___Septoria_leaf_spot",
+        "confidence": 0.8704033493995667
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Spider_mites Two-spotted_spider_mite\\dummy.jpg",
+        "target": 5,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.2330550104379654
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Target_Spot\\dummy.jpg",
+        "target": 6,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.2330550104379654
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\pd_test_Tomato leaf yellow virus (1).jpg",
+        "target": 7,
+        "class_id": 7,
+        "label": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "confidence": 0.6801347732543945
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\pd_test_Tomato leaf yellow virus (2).jpg",
+        "target": 7,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.3793294131755829
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\pd_test_Tomato leaf yellow virus (3).jpg",
+        "target": 7,
+        "class_id": 7,
+        "label": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "confidence": 0.6714116334915161
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\pd_test_Tomato leaf yellow virus (4).jpg",
+        "target": 7,
+        "class_id": 7,
+        "label": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "confidence": 0.5279171466827393
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_Yellow_Leaf_Curl_Virus\\pd_test_Tomato leaf yellow virus (5).jpg",
+        "target": 7,
+        "class_id": 7,
+        "label": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "confidence": 0.4487762749195099
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (1).jpg",
+        "target": 8,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.6824614405632019
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (10).jpg",
+        "target": 8,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.42428499460220337
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (2).jpg",
+        "target": 8,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.2965754568576813
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (3).jpg",
+        "target": 8,
+        "class_id": 8,
+        "label": "Tomato___Tomato_mosaic_virus",
+        "confidence": 0.6688594222068787
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (4).jpg",
+        "target": 8,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.7233746647834778
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (6).jpg",
+        "target": 8,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.2283429056406021
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (7).jpg",
+        "target": 8,
+        "class_id": 8,
+        "label": "Tomato___Tomato_mosaic_virus",
+        "confidence": 0.8247342705726624
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (8).jpg",
+        "target": 8,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.16601482033729553
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___Tomato_mosaic_virus\\pd_test_Tomato leaf mosaic virus (9).jpg",
+        "target": 8,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.37797191739082336
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (1).jpg",
+        "target": 9,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.26562273502349854
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (2).jpg",
+        "target": 9,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.818386435508728
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (3).jpg",
+        "target": 9,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.49320805072784424
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (4).jpg",
+        "target": 9,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.9046487808227539
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (5).jpg",
+        "target": 9,
+        "class_id": 9,
+        "label": "Tomato___healthy",
+        "confidence": 0.5170665979385376
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (6).jpg",
+        "target": 9,
+        "class_id": 2,
+        "label": "Tomato___Late_blight",
+        "confidence": 0.5748239159584045
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (7).jpg",
+        "target": 9,
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.42381930351257324
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\Tomato___healthy\\pd_test_Tomato leaf (8).jpg",
+        "target": 9,
+        "class_id": 7,
+        "label": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "confidence": 0.44000715017318726
+      },
+      {
+        "path": "data\\new-data-removal\\eval\\unknown\\dummy.jpg",
+        "target": 10,
+        "class_id": 3,
+        "label": "Tomato___Leaf_Mold",
+        "confidence": 0.2330550104379654
+      }
+    ]
+  }
+}

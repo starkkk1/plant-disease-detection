@@ -1,363 +1,73 @@
-import os
-import sys
-import yaml
+"""Evaluate a trained checkpoint with the same RGB preprocessing as inference."""
 import argparse
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from torchvision import datasets, transforms
-from torch.utils.data import DataLoader
-from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score, confusion_matrix
-import matplotlib.pyplot as plt
-import seaborn as sns
-import numpy as np
-import cv2
+import sys
 from pathlib import Path
-from PIL import Image
-from tqdm import tqdm
-import timm
 
-from pytorch_grad_cam import GradCAMPlusPlus
-from pytorch_grad_cam.utils.image import show_cam_on_image, preprocess_image
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-# ----------------- UTILS -----------------
-def infer_model_name(ckpt_name):
-    ckpt_name = ckpt_name.lower()
-    if 'convnext' in ckpt_name:
-        return 'convnext_tiny'
-    elif 'efficientnet' in ckpt_name:
-        return 'efficientnet_b0'
-    elif 'mobilenet' in ckpt_name:
-        return 'mobilenetv3_small_100'
+from src.inference.reporting import (
+    add_model_arguments, collect_samples, create_predictor, dataset_evidence,
+    evaluate_samples, metadata, positive_int, save_report,
+)
+
+
+def generate_gradcam(predictor, samples, output_dir, count=5):
+    """Optional explanation pass: gradients run outside inference_mode."""
+    import cv2
+    import numpy as np
+    from PIL import Image
+    from pytorch_grad_cam import GradCAMPlusPlus
+    from pytorch_grad_cam.utils.image import show_cam_on_image
+    from pytorch_grad_cam.utils.model_targets import ClassifierOutputTarget
+
+    model = predictor.model
+    if predictor.model_name == "convnext_tiny":
+        layers = [model.stages[-1].blocks[-1].conv_dw]
+    elif hasattr(model, "blocks"):
+        layers = [model.blocks[-1]]
     else:
-        return 'resnet50'
+        raise ValueError(f"Grad-CAM layer not defined for {predictor.model_name}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    with GradCAMPlusPlus(model=model, target_layers=layers) as cam:
+        for index, (path, label) in enumerate(samples[:count]):
+            prediction = predictor.predict(path, top_k=1)["predictions"][0]
+            with Image.open(path) as image:
+                rgb = image.convert("RGB")
+                tensor = predictor.transform(rgb).unsqueeze(0).to(predictor.device)
+                tensor.requires_grad_(True)
+                heatmap = cam(tensor, targets=[ClassifierOutputTarget(prediction["class_id"])])[0]
+                resized = cv2.resize(np.asarray(rgb), (predictor.image_size, predictor.image_size))
+            overlay = show_cam_on_image(resized.astype(np.float32) / 255, heatmap, use_rgb=True)
+            output = output_dir / f"{index}_true_{label}_pred_{prediction['class_id']}.png"
+            if not cv2.imwrite(str(output), cv2.cvtColor(overlay, cv2.COLOR_RGB2BGR)):
+                raise OSError(f"Could not write Grad-CAM image: {output}")
+            paths.append(str(output))
+    return paths
 
-def infer_config_name(ckpt_name):
-    ckpt_name = ckpt_name.lower()
-    if 'convnext' in ckpt_name:
-        return 'convnext'
-    elif 'efficientnet' in ckpt_name:
-        if 'distilled' in ckpt_name:
-            return 'distillation_effnetb0'
-        return 'efficientnet_b0'
-    elif 'mobilenet' in ckpt_name:
-        if 'distilled' in ckpt_name:
-            return 'distillation_mobilenetv3'
-        return 'mobilenet_v3_small'
-    return None
-
-def get_target_layer(model, model_name):
-    model_name = model_name.lower()
-    if 'convnext' in model_name:
-        return [model.stages[-1].blocks[-1].conv_dw]
-    elif 'resnet' in model_name:
-        return [model.layer4[-1]]
-    elif 'efficientnet' in model_name:
-        return [model.blocks[-1]]
-    elif 'mobilenet' in model_name:
-        return [model.blocks[-1]]
-    elif 'mobilevit' in model_name:
-        return [model.stages[-1]]
-    else:
-        raise ValueError(f"Target layer not defined for model {model_name}")
-
-def load_config(config_path):
-    with open(config_path, 'r') as f:
-        config = yaml.safe_load(f)
-    if 'defaults' in config:
-        default_path = os.path.join(os.path.dirname(config_path), os.path.basename(config['defaults']))
-        if os.path.exists(default_path):
-            with open(default_path, 'r') as f:
-                default_config = yaml.safe_load(f)
-            merged = {**default_config, **config}
-            for k, v in config.items():
-                if isinstance(v, dict) and k in default_config and isinstance(default_config[k], dict):
-                    merged[k] = {**default_config[k], **v}
-            return merged
-    return config
-
-# ----------------- EVALUATION -----------------
-def validate(model, dataloader, criterion, device):
-    model.eval()
-    running_loss = 0.0
-    all_preds = []
-    all_targets = []
-    
-    with torch.no_grad():
-        for inputs, targets in dataloader:
-            inputs, targets = inputs.to(device, non_blocking=True), targets.to(device, non_blocking=True)
-            
-            # Sử dụng Automatic Mixed Precision (FP16) để tăng tốc cho Tensor Cores trên RTX 2070 Super
-            with torch.cuda.amp.autocast():
-                outputs = model(inputs)
-                loss = criterion(outputs, targets)
-            
-            running_loss += loss.item() * inputs.size(0)
-            _, preds = torch.max(outputs, 1)
-            all_preds.extend(preds.cpu().numpy())
-            all_targets.extend(targets.cpu().numpy())
-            
-    if len(dataloader.dataset) == 0:
-        return 0, 0, 0, 0, 0, [], []
-
-    epoch_loss = running_loss / len(dataloader.dataset)
-    acc = accuracy_score(all_targets, all_preds)
-    f1 = f1_score(all_targets, all_preds, average='macro', zero_division=0)
-    precision = precision_score(all_targets, all_preds, average='macro', zero_division=0)
-    recall = recall_score(all_targets, all_preds, average='macro', zero_division=0)
-    
-    return epoch_loss, acc, f1, precision, recall, all_targets, all_preds
-
-def generate_cam(model, target_layers, img_tensor):
-    cam = GradCAMPlusPlus(model=model, target_layers=target_layers)
-    grayscale_cam = cam(input_tensor=img_tensor, targets=None)
-    return grayscale_cam[0, :]
-
-# ----------------- RUN PIPELINE -----------------
-def run_evaluation_and_gradcam(ckpt_filename, base_dir, device, args, cross_model_anchors=None):
-    ckpt_path = os.path.join(base_dir, 'checkpoints', ckpt_filename)
-    model_cfg_name = infer_config_name(ckpt_filename)
-    timm_model_name = infer_model_name(ckpt_filename)
-    
-    if not model_cfg_name:
-        print(f"Skipping {ckpt_filename}, could not infer config.")
-        return
-        
-    print(f"\n[{model_cfg_name.upper()}] Loading model...")
-    config_path = os.path.join(base_dir, 'configs', f"{model_cfg_name}.yaml")
-    config = load_config(config_path) if os.path.exists(config_path) else {}
-    num_classes = config.get('model', {}).get('num_classes', 11)
-    
-    try:
-        model = timm.create_model(timm_model_name, pretrained=False, num_classes=num_classes)
-        model.load_state_dict(torch.load(ckpt_path, map_location=device))
-        model = model.to(device)
-        model.eval()
-    except Exception as e:
-        print(f"Error loading model {timm_model_name}: {e}")
-        return
-        
-    criterion = nn.CrossEntropyLoss()
-    
-    target_dir = os.path.join(base_dir, 'data', 'new-data-removal', args.dataset)
-    if not os.path.exists(target_dir):
-        print(f"Target directory not found: {target_dir}")
-        return
-        
-    classes = sorted([d for d in os.listdir(target_dir) if os.path.isdir(os.path.join(target_dir, d))])
-    
-    test_transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
-    
-    # 1. EVALUATION (Eval on both 'eval' and 'test' sets)
-    cm_targets, cm_preds = [], []
-    for split_name in ['eval', 'test']:
-        split_dir = os.path.join(base_dir, 'data', 'new-data-removal', split_name)
-        if not os.path.exists(split_dir):
-            continue
-            
-        split_dataset = datasets.ImageFolder(split_dir, transform=test_transform)
-        # Tối ưu hóa DataLoader cho RTX 2070 Super: batch_size lớn hơn, num_workers, pin_memory
-        split_loader = DataLoader(
-            split_dataset, 
-            batch_size=128, 
-            shuffle=False, 
-            num_workers=4, 
-            pin_memory=True
-        )
-        
-        print(f"--- Evaluating {model_cfg_name} on {split_name.upper()} set ---")
-        l_loss, l_acc, l_f1, l_prec, l_rec, l_targets, l_preds = validate(model, split_loader, criterion, device)
-        print(f"{model_cfg_name} {split_name.capitalize()} -> Loss: {l_loss:.4f} | Acc: {l_acc:.4f} | F1: {l_f1:.4f}\n")
-        
-        if split_name == args.dataset:
-            cm_targets = l_targets
-            cm_preds = l_preds
-            # Rename test_dir for Grad-CAM logic below to use the target dataset
-            test_dir = split_dir
-    
-    # Confusion Matrix
-    cm = confusion_matrix(cm_targets, cm_preds)
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=classes, yticklabels=classes)
-    plt.ylabel('Thực tế (Actual)')
-    plt.xlabel('Dự đoán (Predicted)')
-    plt.title(f'Confusion Matrix - {model_cfg_name}')
-    plt.tight_layout()
-    
-    cm_dir = os.path.join(base_dir, 'results', 'confusion_matrix')
-    os.makedirs(cm_dir, exist_ok=True)
-    cm_path = os.path.join(cm_dir, f"confusion_matrix_{model_cfg_name}.png")
-    plt.savefig(cm_path)
-    plt.close()
-    print(f"[*] Đã lưu Confusion Matrix: {cm_path}")
-    
-    # 2. GRAD-CAM
-    if args.skip_gradcam:
-        return
-        
-    print(f"--- Generating Grad-CAM for {model_cfg_name} ---")
-    try:
-        target_layers = get_target_layer(model, timm_model_name)
-    except Exception as e:
-        print(f"Error getting Grad-CAM target layers: {e}")
-        return
-        
-    gradcam_dir_name = 'gradcam_eval' if args.dataset == 'eval' else 'gradcam'
-    out_base = Path(base_dir) / 'results' / gradcam_dir_name / model_cfg_name
-    dir_correct = out_base / 'correct'
-    dir_wrong = out_base / 'wrong'
-    dir_per_class = out_base / 'per_class'
-    
-    for d in [dir_correct, dir_wrong, dir_per_class]:
-        d.mkdir(parents=True, exist_ok=True)
-        
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    saved_correct = {c: 0 for c in classes}
-    saved_wrong = {c: 0 for c in classes}
-    
-    pbar = tqdm(classes, desc="Grad-CAM Progress", position=0)
-    for class_name in pbar:
-        pbar.set_postfix({'Current': class_name})
-        class_dir = os.path.join(test_dir, class_name)
-        if not os.path.isdir(class_dir):
-            continue
-            
-        images = [f for f in os.listdir(class_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-        for img_name in images:
-            if saved_correct[class_name] >= args.num_correct and saved_wrong[class_name] >= args.num_wrong:
-                break
-                
-            img_path = os.path.join(class_dir, img_name)
-            img_rgb = np.array(Image.open(img_path).convert('RGB'))
-            img_resized = cv2.resize(img_rgb, (224, 224))
-            img_viz = np.float32(img_resized) / 255.0
-            
-            input_tensor = preprocess_image(img_viz, mean=mean, std=std).to(device)
-            
-            with torch.no_grad():
-                output = model(input_tensor)
-                probs = F.softmax(output, dim=1)
-                pred_conf, pred_idx = torch.max(probs, dim=1)
-                pred_conf = pred_conf.item()
-                pred_idx = pred_idx.item()
-                
-            pred_class = classes[pred_idx] if pred_idx < len(classes) else "Unknown"
-            is_correct = (pred_class == class_name)
-            
-            if is_correct and saved_correct[class_name] >= args.num_correct:
-                continue
-            if not is_correct and saved_wrong[class_name] >= args.num_wrong:
-                continue
-                
-            try:
-                grayscale_cam = generate_cam(model, target_layers, input_tensor)
-                cam_image = show_cam_on_image(img_viz, grayscale_cam, use_rgb=True)
-            except Exception as e:
-                continue
-                
-            img_id = os.path.splitext(img_name)[0]
-            out_filename = f"true_{class_name}__pred_{pred_class}__conf_{pred_conf:.2f}__idx_{img_id}.png"
-            cam_image_bgr = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
-            
-            if is_correct:
-                cv2.imwrite(str(dir_correct / out_filename), cam_image_bgr)
-                saved_correct[class_name] += 1
-            else:
-                cv2.imwrite(str(dir_wrong / out_filename), cam_image_bgr)
-                saved_wrong[class_name] += 1
-                
-            if saved_correct[class_name] == 1:
-                cv2.imwrite(str(dir_per_class / out_filename), cam_image_bgr)
-                
-    # Cross-Model Generation
-    if cross_model_anchors:
-        gradcam_dir_name = 'gradcam_eval' if args.dataset == 'eval' else 'gradcam'
-        dir_global_cross = Path(base_dir) / 'results' / gradcam_dir_name / 'cross_model_comparison'
-        dir_global_cross.mkdir(parents=True, exist_ok=True)
-        for class_name, img_path in cross_model_anchors.items():
-            img_rgb = np.array(Image.open(img_path).convert('RGB'))
-            img_resized = cv2.resize(img_rgb, (224, 224))
-            img_viz = np.float32(img_resized) / 255.0
-            input_tensor = preprocess_image(img_viz, mean=mean, std=std).to(device)
-            try:
-                with torch.no_grad():
-                    output = model(input_tensor)
-                    probs = F.softmax(output, dim=1)
-                    pred_conf, pred_idx = torch.max(probs, dim=1)
-                    pred_class = classes[pred_idx.item()]
-                    
-                grayscale_cam = generate_cam(model, target_layers, input_tensor)
-                cam_image = show_cam_on_image(img_viz, grayscale_cam, use_rgb=True)
-                cam_image_bgr = cv2.cvtColor(cam_image, cv2.COLOR_RGB2BGR)
-                out_filename = f"true_{class_name}__pred_{pred_class}__model_{model_cfg_name}.png"
-                cv2.imwrite(str(dir_global_cross / out_filename), cam_image_bgr)
-            except Exception:
-                continue
-
-    print(f"[*] Đã lưu Grad-CAM cho {model_cfg_name}.")
 
 def main():
-    parser = argparse.ArgumentParser(description="Evaluate and generate Grad-CAM for models.")
-    parser.add_argument('--dataset', type=str, default='test', choices=['test', 'eval'], help="Dataset to evaluate on")
-    parser.add_argument('--num_correct', type=int, default=5, help="Grad-CAM: number of correct predictions to save per class")
-    parser.add_argument('--num_wrong', type=int, default=5, help="Grad-CAM: number of wrong predictions to save per class")
-    parser.add_argument('--skip_gradcam', action='store_true', help="Skip Grad-CAM generation")
-    parser.add_argument('--model', type=str, default=None, help="Tên model cụ thể muốn chạy (vd: convnext). Nếu để trống sẽ chạy tất cả.")
+    parser = argparse.ArgumentParser(description=__doc__)
+    add_model_arguments(parser)
+    parser.add_argument("--dataset", required=True, type=Path, help="Labeled ImageFolder directory")
+    parser.add_argument("--limit-per-class", type=positive_int)
+    parser.add_argument("--gradcam", action="store_true", help="Optional Grad-CAM++ pass")
+    parser.add_argument("--gradcam-count", type=positive_int, default=5)
     args = parser.parse_args()
+    predictor, config = create_predictor(args)
+    samples = collect_samples(args.dataset, predictor.class_names, args.limit_per_class)
+    report = metadata(predictor, config)
+    report["dataset"] = dataset_evidence(samples, args.dataset, predictor.class_names)
+    report["limit_per_class"] = args.limit_per_class
+    report["metrics"] = evaluate_samples(predictor, samples)
+    if args.gradcam:
+        report["gradcam_images"] = generate_gradcam(
+            predictor, samples, args.output.parent / f"{args.output.stem}_gradcam", args.gradcam_count)
+    save_report(args.output, report)
+    print(f"{predictor.model_version}: n={len(samples)}, "
+          f"accuracy={report['metrics']['accuracy']:.6f}, "
+          f"macro-F1={report['metrics']['macro_f1']:.6f}; saved {args.output}")
 
-    base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    chk_dir = os.path.join(base_dir, 'checkpoints')
-    
-    # Cleanup old results
-    import shutil
-    cm_dir = os.path.join(base_dir, 'results', 'confusion_matrix')
-    if os.path.exists(cm_dir): shutil.rmtree(cm_dir, ignore_errors=True)
-    
-    if not args.skip_gradcam:
-        gradcam_dir_name = 'gradcam_eval' if args.dataset == 'eval' else 'gradcam'
-        gradcam_dir = os.path.join(base_dir, 'results', gradcam_dir_name)
-        if os.path.exists(gradcam_dir): shutil.rmtree(gradcam_dir, ignore_errors=True)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    if device.type == 'cuda':
-        torch.backends.cudnn.benchmark = True  # Kích hoạt cudnn benchmark để tăng tốc độ convolution
-    print(f"Using device: {device} (Optimized for RTX 2070 Super)")
-    
-    if not os.path.exists(chk_dir):
-        print("Error: Checkpoints directory not found!")
-        return
-        
-    ckpt_files = [f for f in os.listdir(chk_dir) if f.endswith('.pth') and 'cyclegan' not in f.lower()]
-    
-    if args.model:
-        ckpt_files = [f for f in ckpt_files if args.model.lower() in f.lower()]
-        if not ckpt_files:
-            print(f"Error: Không tìm thấy checkpoint nào khớp với từ khoá '{args.model}'")
-            return
-    
-    # Pre-select cross-model anchor images (1 per class)
-    cross_model_anchors = {}
-    test_dir_path = os.path.join(base_dir, 'data', 'new-data-removal', args.dataset)
-    if os.path.exists(test_dir_path):
-        classes = sorted([d for d in os.listdir(test_dir_path) if os.path.isdir(os.path.join(test_dir_path, d))])
-        for c in classes:
-            c_dir = os.path.join(test_dir_path, c)
-            imgs = [f for f in os.listdir(c_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
-            if imgs:
-                cross_model_anchors[c] = os.path.join(c_dir, imgs[0])
-    
-    print(f"\n[*] Bắt đầu đánh giá {len(ckpt_files)} models...")
-    for idx, f in enumerate(ckpt_files):
-        print(f"\n{'='*80}\n[{idx+1}/{len(ckpt_files)}] Đang xử lý: {f}\n{'='*80}")
-        run_evaluation_and_gradcam(f, base_dir, device, args, cross_model_anchors)
-        
-    print("\n[+] HOÀN TẤT! Kết quả đã được lưu trong thư mục results/")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

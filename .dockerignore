@@ -1,0 +1,17 @@
+.git
+.env
+**/.env
+**/.env.local
+**/.env.*.local
+**/__pycache__
+**/*.pyc
+frontend
+data
+results
+reports
+notebooks
+docs
+tests
+.tmp
+checkpoints/*.pth
+!checkpoints/mobilenetv3_small_100_best.pth

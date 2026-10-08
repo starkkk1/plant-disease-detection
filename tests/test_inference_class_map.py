@@ -17,6 +17,8 @@ def test_class_map_sorted_by_training_index(tmp_path):
     {"healthy": 1},
     {"a": 0, "b": 0},
     {"a": True},
+    {"": 0},
+    {"a": 0.0},
     ["healthy"],
 ])
 def test_invalid_class_mapping_fails_closed(tmp_path, mapping):

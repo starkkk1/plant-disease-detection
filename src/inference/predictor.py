@@ -5,13 +5,22 @@ Never assume the order of disease names or silently load random weights.
 """
 
 import json
+import hashlib
 from pathlib import Path
 
 import timm
 import torch
 from PIL import Image, UnidentifiedImageError
 
-from .preprocess import build_transform
+from .preprocess import build_transform, IMAGENET_MEAN, IMAGENET_STD
+
+
+def sha256_file(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def load_class_names(class_map_path):
@@ -21,7 +30,7 @@ def load_class_names(class_map_path):
         mapping = json.load(file)
     if not isinstance(mapping, dict) or not mapping:
         raise ValueError("class_to_idx must be a non-empty JSON object")
-    if any(not isinstance(name, str) or not isinstance(index, int) or isinstance(index, bool)
+    if any(not isinstance(name, str) or not name.strip() or not isinstance(index, int) or isinstance(index, bool)
            for name, index in mapping.items()):
         raise ValueError("class_to_idx must map class-name strings to integer indices")
     if sorted(mapping.values()) != list(range(len(mapping))):
@@ -38,17 +47,24 @@ class PlantDiseasePredictor:
         checkpoint_path,
         class_map_path,
         model_name="mobilenetv3_small_100",
-        model_version="unversioned",
+        model_version=None,
         image_size=224,
         device="cpu",
+        mean=IMAGENET_MEAN,
+        std=IMAGENET_STD,
     ):
         self.device = torch.device(device)
-        self.model_version = model_version
+        self.model_name = model_name
+        self.image_size = image_size
         self.class_names = load_class_names(class_map_path)
-        self.transform = build_transform(image_size)
+        self.transform = build_transform(image_size, mean, std)
         path = Path(checkpoint_path)
         if not path.is_file():
             raise FileNotFoundError(f"Missing model checkpoint: {path}")
+        self.checkpoint_path = path.resolve()
+        self.checkpoint_sha256 = sha256_file(path)
+        self.class_map_sha256 = sha256_file(class_map_path)
+        self.model_version = model_version or f"{model_name}:{self.checkpoint_sha256[:12]}"
         self.model = timm.create_model(
             model_name, pretrained=False, num_classes=len(self.class_names)
         )
@@ -64,9 +80,10 @@ class PlantDiseasePredictor:
         self.model.to(self.device)
         self.model.eval()
 
-    def predict(self, image, top_k=3):
+    def predict(self, image, top_k=None):
         """Predict PIL Image or image path. Returns JSON-serializable top-k results."""
-        if not 1 <= top_k <= len(self.class_names):
+        top_k = min(3, len(self.class_names)) if top_k is None else top_k
+        if not isinstance(top_k, int) or isinstance(top_k, bool) or not 1 <= top_k <= len(self.class_names):
             raise ValueError(f"top_k must be between 1 and {len(self.class_names)}")
         try:
             if isinstance(image, (str, Path)):
@@ -84,6 +101,8 @@ class PlantDiseasePredictor:
             logits = self.model(tensor)
             if logits.ndim != 2 or logits.shape != (1, len(self.class_names)):
                 raise RuntimeError(f"Unexpected output shape: {tuple(logits.shape)}")
+            if not torch.isfinite(logits).all():
+                raise RuntimeError("Model returned non-finite logits")
             probs = torch.softmax(logits, dim=1)[0]
             values, indices = torch.topk(probs, k=top_k)
         return {

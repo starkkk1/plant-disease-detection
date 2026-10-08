@@ -1,0 +1,24 @@
+{
+  "ServiceName": "plant-disease-s01",
+  "SourceConfiguration": {
+    "ImageRepository": {
+      "ImageIdentifier": "ACCOUNT_ID.dkr.ecr.APPROVED_REGION.amazonaws.com/APPROVED_REPOSITORY:VERIFIED_TAG",
+      "ImageRepositoryType": "ECR",
+      "ImageConfiguration": {
+        "Port": "8000",
+        "RuntimeEnvironmentVariables": {
+          "MODEL_THREADS": "1",
+          "CORS_ORIGINS": "https://APPROVED_FRONTEND_ORIGIN"
+        }
+      }
+    },
+    "AutoDeploymentsEnabled": false,
+    "AuthenticationConfiguration": {"AccessRoleArn": "arn:aws:iam::ACCOUNT_ID:role/APPROVED_ECR_ACCESS_ROLE"}
+  },
+  "InstanceConfiguration": {"Cpu": "1024", "Memory": "2048"},
+  "AutoScalingConfigurationArn": "APPROVED_CONFIGURATION_ARN_WITH_MAX_SIZE_1",
+  "HealthCheckConfiguration": {
+    "Protocol": "HTTP", "Path": "/health", "Interval": 10, "Timeout": 5,
+    "HealthyThreshold": 1, "UnhealthyThreshold": 5
+  }
+}

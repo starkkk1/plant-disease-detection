@@ -1,6 +1,70 @@
 # Plant Disease Detection - Run Guide
 
-This guide provides the quick commands needed to run the various scripts in this project. All commands should be run from the root directory of the project (`plant-disease-detection`).
+This guide provides the quick commands needed to run the various scripts in this project. Unless a section states otherwise, run commands from the root directory of the project (`plant-disease-detection`).
+
+## Local classification MVP (issues #4–#9)
+
+Terminal 1 (this command also works from `D:\Code\python` or `frontend/`):
+
+```powershell
+# With the verified existing ML environment:
+& D:\Code\python\.venv\Scripts\python.exe D:\Code\python\plant-disease-detection\scripts\run_api.py --host 0.0.0.0 --port 8000
+```
+
+For a new environment, install `backend/requirements.txt` with a supported CPython interpreter. It installs CPU-only torch/torchvision and the API dependencies without Qdrant, Streamlit or Grad-CAM. Keep the real `checkpoints/mobilenetv3_small_100_best.pth`; the verified class map is included in `configs/class_to_idx.sprint01.json`. The API fails readiness if the checkpoint is absent or incompatible. No retraining is needed.
+
+Terminal 2:
+
+```powershell
+Set-Location D:\Code\python\plant-disease-detection\frontend
+npm ci
+npm run dev -- --hostname 0.0.0.0 --port 3000
+```
+
+Open `http://localhost:3000`; Swagger is `http://localhost:8000/docs`, and readiness is `http://localhost:8000/health`. Choose or capture a JPEG/PNG photo, preview it and press the recognition button. The unchecked demo toggle uses the real API; explicitly checking it enables labeled frontend sample results. It is never enabled automatically when the API fails.
+
+### If Python cannot import `backend`
+
+`backend` belongs to `plant-disease-detection/`, not its parent folder or `frontend/`. The launcher above supplies Uvicorn's `--app-dir` using its own file location, so it resolves the project's module regardless of the terminal's current directory. An equivalent direct command is:
+
+```powershell
+& D:\Code\python\.venv\Scripts\python.exe -m uvicorn backend.main:app --app-dir D:\Code\python\plant-disease-detection --host 0.0.0.0 --port 8000
+```
+
+For a different checkout, replace the two absolute paths with its Python environment and project directory. When already in the repository root with the correct environment activated, `python scripts/run_api.py --port 8000` also works. Do not run `python backend/main.py` directly; its package imports require the repository on Python's module path. Check the interpreter with `python -c "import sys; print(sys.executable)"`: this workstation's default `python` is MSYS and does not contain the verified ML dependencies.
+
+To set a hosted or different backend, put `NEXT_PUBLIC_API_URL=https://YOUR_APPROVED_API_ORIGIN` in `frontend/.env.local` or build environment, then restart/rebuild Next.js. This is a public endpoint setting, not a secret. If unset, the client uses the page hostname at port 8000. `backend/.env.example` documents backend variables; set them in the process environment rather than assuming the file is automatically loaded.
+
+### Phone on the same Wi-Fi
+
+Use the computer's LAN IPv4 address as `YOUR_LAN_IP`. Start the API with the phone page's exact origin allowed:
+
+```powershell
+$env:CORS_ORIGINS='http://localhost:3000,http://127.0.0.1:3000,http://YOUR_LAN_IP:3000'
+& D:\Code\python\.venv\Scripts\python.exe -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+```
+
+Start Next.js on `0.0.0.0` as above and open `http://YOUR_LAN_IP:3000` on Android Chrome. Confirm `/health` is reachable at `http://YOUR_LAN_IP:8000/health`. Allow the development ports only on the trusted private network using the company's firewall rules. Camera/picker behavior is device-dependent; JPEG/PNG is supported, HEIC is not. Physical-phone testing remains a manual check; the recorded automated demo uses mobile browser emulation.
+
+### Tests and evidence
+
+```powershell
+& D:\Code\python\.venv\Scripts\python.exe -m pytest tests -q
+Set-Location frontend
+npm run build
+$env:PYTHON_EXECUTABLE='D:\Code\python\.venv\Scripts\python.exe'
+npm run test:e2e
+```
+
+Playwright runs real-model and mocked-error scenarios on mobile and desktop and starts local services on ports 8000/3005 if needed. It uses installed Microsoft Edge on Windows; on other systems install Chromium with `npx playwright install chromium`. A missing checkpoint prevents the real E2E test from passing; the mock UI is a separate explicit scenario.
+
+On this workstation, Windows temp-folder ACLs required the final Python run to use `--basetemp D:\Code\python\plant-disease-detection\.tmp\pytest-app-final-01`; choose a fresh directory under the workspace if the default temp folder is inaccessible. After upgrading Next.js to 15.5.27 and patching PostCSS, a clean `npm ci --ignore-scripts`, production build, and browser run with fresh local servers succeeded. `--output test-results-updated --reporter list` was used for that browser run. Final results: **45 Python tests, 18 browser tests passed**, and the production build succeeded. Existing research-page image-optimization lint warnings remain non-fatal. Runtime dependency audit reports zero findings; remaining build/lint findings are recorded in [frontend-dependency-review.md](docs/frontend-dependency-review.md).
+
+Evidence: `reports/sprint-01/api-live-smoke.json`, `reports/sprint-01/frontend-mobile.png`, and [delivery status](docs/sprint-01-app-delivery.md). API details are in [api-contract.md](docs/api-contract.md), phone decision in [mobile-plan.md](docs/mobile-plan.md), cloud design in [architecture.md](docs/architecture.md), and company-access gaps in [aws-readiness.md](docs/aws-readiness.md). Docker and paid AWS deployment have not been run.
+
+### Optional research search
+
+The original frontend research UI is retained at `/research`. Its prediction reads the new classification API. To enable the old Qdrant search separately, start `python -m uvicorn src.search.api:app --host 127.0.0.1 --port 8001` with the existing research dependencies and Qdrant index. `NEXT_PUBLIC_SEARCH_API_URL` can override that origin. The old search service and its path-based image endpoint are for the local research workflow; they are not part of the new container/API.
 
 ## 1. Setup Environment
 Ensure your virtual environment is activated and dependencies are installed.
@@ -11,6 +75,9 @@ Ensure your virtual environment is activated and dependencies are installed.
 # Install requirements
 pip install -r requirements.txt
 ```
+
+For tests, install `requirements-dev.txt` and run `python -m pytest tests -q`.
+CPU inference works with a CPU PyTorch installation; CUDA is optional. The verified local interpreter is `D:\Code\python\.venv\Scripts\python.exe` (the default MSYS Python has no PyTorch). Activate that environment or substitute its full path for `python` in the commands below.
 
 ## 1.5. Training Models
 To train the Teacher model (ConvNeXt):
@@ -27,30 +94,35 @@ python scripts/train_distillation.py --config configs/distillation_mobilenetv3.y
 - Best model checkpoints will be saved in `checkpoints/`.
 
 
-## 2. Evaluation, Confusion Matrix & Explainability (Grad-CAM)
-To evaluate all trained models on the test set, automatically generate Confusion Matrices, and generate visual heatmaps (Grad-CAM):
+## 2. Evaluation and optional Grad-CAM++
+
+Run from the project root. Use the config matching the checkpoint; no training or pretrained-weight download occurs. Missing or incompatible artifacts stop execution.
+
 ```bash
-# Evaluate all models on test set (Default)
-python scripts/evaluate.py
-
-# Evaluate a specific model (e.g., convnext)
-python scripts/evaluate.py --model convnext
-
-# Evaluate a specific model on the 'eval' dataset instead of 'test'
-python scripts/evaluate.py --dataset eval --model resnet
+python scripts/evaluate.py --config configs/distillation_mobilenetv3.yaml --checkpoint checkpoints/mobilenetv3_small_100_distilled_best.pth --dataset data/new-data-removal/test --device cpu --threads 4 --output reports/mobilenet_test.json
+python scripts/evaluate.py --config configs/distillation_mobilenetv3.yaml --checkpoint checkpoints/mobilenetv3_small_100_distilled_best.pth --dataset data/new-data-removal/eval --device cpu --threads 4 --output reports/mobilenet_external.json
 ```
-**Outputs:** 
-- Metrics (Loss, Accuracy, F1, Precision, Recall) will be printed directly in the terminal.
-- Confusion Matrix images (`.png`) are automatically saved in the `results/confusion_matrix/` directory.
-- Grad-CAM Heatmap images are saved in `results/gradcam/`, categorized by model and separated into folders based on prediction correctness (e.g., `per_class`, `correct`, `wrong`).
+
+JSON reports include accuracy, macro-F1/precision/recall over all training classes, confusion matrix counts in training order, per-image predictions, class counts and artifact/dataset hashes. Add `--gradcam --gradcam-count 5` to save optional explanations next to the JSON. Add `--limit-per-class 1` for an explicitly labeled smoke subset; omit it for full evaluation. `--class-map` can override the config's training map.
+
+The earlier research workflow is archived in `scripts/evaluate_gradcam_legacy.py`; its center-crop metrics and cleanup behavior are retained for reference. Use the new commands for inference-aligned metrics.
 
 ## 3. Benchmarking (Latency & Size)
 To measure model size (MB), parameter count (M), and inference latency (ms) on CPU:
 ```bash
-python scripts/benchmark.py
+python scripts/benchmark.py --config configs/distillation_mobilenetv3.yaml --checkpoint checkpoints/mobilenetv3_small_100_distilled_best.pth --dataset data/new-data-removal/eval --device cpu --threads 4 --warmup 10 --iterations 100 --evaluate --output reports/mobilenet_benchmark.json
 ```
 **Outputs:** 
-- A formatted table printed in the terminal comparing Teacher and Student models.
+- Trained checkpoint size (MiB), parameters, individual latency samples, p50/p95 and optional labeled accuracy/macro-F1 in JSON.
+- Latency includes file decode, RGB conversion, resize, normalization, forward pass and top-1 output. Model loading, Grad-CAM and network overhead are excluded. `--image path/to/leaf.jpg` provides latency without labels; omit `--evaluate` in that case.
+
+To reproduce the complete five-model audit and baseline on all local test/eval images:
+
+```bash
+python scripts/audit_models.py --threads 4 --iterations 100 --output-dir reports/sprint-01
+```
+
+This validates `class_to_idx.json` against the current training dataset and saves `baseline.json` plus ten detailed evaluation JSON files. See `docs/sprint-01-model-audit.md` and `docs/sprint-01-baseline.md` for findings and data limitations. Weights and datasets remain local artifacts ignored by Git.
 
 ## 4. Build Qdrant Search Index (Vector Database)
 To encode the dataset and push vectors into Qdrant for semantic search:

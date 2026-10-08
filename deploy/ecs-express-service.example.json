@@ -1,0 +1,15 @@
+{
+  "serviceName": "plant-disease-s01",
+  "executionRoleArn": "arn:aws:iam::ACCOUNT_ID:role/APPROVED_TASK_EXECUTION_ROLE",
+  "infrastructureRoleArn": "arn:aws:iam::ACCOUNT_ID:role/APPROVED_EXPRESS_INFRASTRUCTURE_ROLE",
+  "primaryContainer": {
+    "image": "ACCOUNT_ID.dkr.ecr.APPROVED_REGION.amazonaws.com/APPROVED_REPOSITORY:VERIFIED_TAG",
+    "containerPort": 8000,
+    "environment": [
+      {"name": "MODEL_THREADS", "value": "1"},
+      {"name": "CORS_ORIGINS", "value": "https://APPROVED_FRONTEND_ORIGIN"}
+    ]
+  },
+  "healthCheckPath": "/health",
+  "scalingTarget": {"minTaskCount": 1, "maxTaskCount": 1}
+}

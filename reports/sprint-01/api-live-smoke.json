@@ -1,0 +1,41 @@
+{
+  "health": {
+    "request_id": "ff7caa78-9d54-43ca-bbe0-5904cfe0ce36",
+    "api_version": "1.0",
+    "status": "ok",
+    "model_version": "mobilenetv3_small_100:90b0a4bed0d2",
+    "is_mock": false,
+    "max_upload_bytes": 5242880,
+    "max_image_pixels": 20000000,
+    "supported_formats": [
+      "image/jpeg",
+      "image/png"
+    ]
+  },
+  "prediction": {
+    "request_id": "12be436b-a27e-47e8-b780-7ad5407f8678",
+    "model_version": "mobilenetv3_small_100:90b0a4bed0d2",
+    "is_mock": false,
+    "processing_time_ms": 127.82989999868732,
+    "predictions": [
+      {
+        "class_id": 0,
+        "label": "Tomato___Bacterial_spot",
+        "confidence": 0.9999997615814209
+      },
+      {
+        "class_id": 6,
+        "label": "Tomato___Target_Spot",
+        "confidence": 2.2734198523721716e-07
+      },
+      {
+        "class_id": 7,
+        "label": "Tomato___Tomato_Yellow_Leaf_Curl_Virus",
+        "confidence": 1.5359178817675456e-08
+      }
+    ]
+  },
+  "request_id_header": "12be436b-a27e-47e8-b780-7ad5407f8678",
+  "swagger_status": 200,
+  "openapi_status": 200
+}

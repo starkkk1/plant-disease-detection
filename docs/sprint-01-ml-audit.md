@@ -1,5 +1,7 @@
 # Sprint 01 — ML audit and blockers
 
+> Superseded by [the verified model audit](sprint-01-model-audit.md) and [measured baseline](sprint-01-baseline.md) on 2026-10-08. The historical blockers below describe the previous branch state; trained artifacts and data have now been found locally and exercised.
+
 ## Existing implementation
 
 - `src/models/inference_model.py` already implements `PlantDiseasePredictor` with timm and optional Grad-CAM++; it hard-codes class names and catches checkpoint loading errors instead of stopping execution.

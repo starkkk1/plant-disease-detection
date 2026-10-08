@@ -1,0 +1,21 @@
+{
+  "checks": [
+    {
+      "cwd": "D:\\Code\\python",
+      "health_status": 200,
+      "prediction_status": 200,
+      "model_version": "mobilenetv3_small_100:90b0a4bed0d2",
+      "label": "Tomato___Bacterial_spot",
+      "is_mock": false
+    },
+    {
+      "cwd": "D:\\Code\\python\\plant-disease-detection\\frontend",
+      "health_status": 200,
+      "prediction_status": 200,
+      "model_version": "mobilenetv3_small_100:90b0a4bed0d2",
+      "label": "Tomato___Bacterial_spot",
+      "is_mock": false
+    }
+  ],
+  "test_servers_stopped": true
+}
