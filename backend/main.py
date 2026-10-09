@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from PIL import Image, UnidentifiedImageError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from backend.schemas import ErrorResponse, HealthResponse, PredictionResponse
+from backend.schemas import ErrorResponse, HealthResponse, PredictionResponse, ExplanationResponse
 from backend.settings import Settings
 
 logger = logging.getLogger("plant_api")
@@ -136,7 +136,7 @@ def create_app(settings=None, predictor_factory=None):
     @application.exception_handler(RequestValidationError)
     async def validation_error(request, exc):
         return JSONResponse(status_code=422, content={"request_id": request.state.request_id,
-            "error": {"code": "invalid_request", "message": "Provide one image file and top_k between 1 and 11."}})
+            "error": {"code": "invalid_request", "message": "Provide an image, top_k between 1 and 11, and an optional valid class_id for /explain."}})
 
     @application.get("/health", response_model=HealthResponse,
                      responses={503: {"model": HealthResponse}})
@@ -150,6 +150,15 @@ def create_app(settings=None, predictor_factory=None):
     @application.post("/predict", response_model=PredictionResponse,
         responses={code: {"model": ErrorResponse} for code in (400, 413, 415, 422, 500, 503, 504)})
     async def predict(request: Request, file: UploadFile = File(...), top_k: int = Form(3, ge=1, le=11)):
+        return await run_image_request(request, file, top_k)
+
+    @application.post("/explain", response_model=ExplanationResponse,
+        responses={code: {"model": ErrorResponse} for code in (400, 413, 415, 422, 500, 503, 504)})
+    async def explain(request: Request, file: UploadFile = File(...),
+                      top_k: int = Form(3, ge=1, le=11), class_id: int | None = Form(None, ge=0, le=10)):
+        return await run_image_request(request, file, top_k, explain=True, class_id=class_id)
+
+    async def run_image_request(request, file, top_k, explain=False, class_id=None):
         started = time.perf_counter()
         try:
             if file.content_type not in ("image/jpeg", "image/png"):
@@ -164,6 +173,8 @@ def create_app(settings=None, predictor_factory=None):
             raise error(503, "model_unavailable", "The model is unavailable. Try again later.")
         if top_k > len(predictor.class_names):
             raise error(422, "invalid_request", "top_k exceeds the number of trained classes.")
+        if class_id is not None and class_id >= len(predictor.class_names):
+            raise error(422, "invalid_request", "class_id exceeds the number of trained classes.")
         try:
             await asyncio.wait_for(application.state.slot.acquire(), settings.queue_timeout)
         except TimeoutError:
@@ -172,6 +183,12 @@ def create_app(settings=None, predictor_factory=None):
         def work():
             image = decode_image(data, file.content_type, settings)
             try:
+                if explain:
+                    from src.inference.explain import explain_image, ExplanationUnavailable
+                    try:
+                        return explain_image(predictor, image, top_k=top_k, class_id=class_id)
+                    except ExplanationUnavailable:
+                        raise error(503, "explanation_unavailable", "Grad-CAM++ is unavailable for this model.") from None
                 return predictor.predict(image, top_k=top_k)
             finally:
                 image.close()
@@ -186,7 +203,8 @@ def create_app(settings=None, predictor_factory=None):
         future.add_done_callback(completed)
         try:
             result = await asyncio.wait_for(asyncio.shield(future), settings.inference_timeout)
-            return PredictionResponse(request_id=request.state.request_id, **result,
+            response_type = ExplanationResponse if explain else PredictionResponse
+            return response_type(request_id=request.state.request_id, **result,
                                       processing_time_ms=(time.perf_counter() - started) * 1000)
         except TimeoutError:
             raise error(504, "prediction_timeout", "Prediction timed out. Try again shortly.") from None
@@ -194,7 +212,9 @@ def create_app(settings=None, predictor_factory=None):
             raise
         except Exception:
             logger.exception("Prediction failed for request %s", request.state.request_id)
-            raise error(500, "prediction_failed", "Prediction failed. Try another image or retry later.") from None
+            raise error(500, "explanation_failed" if explain else "prediction_failed",
+                        "Explanation failed. Try again later." if explain else
+                        "Prediction failed. Try another image or retry later.") from None
 
     return application
 

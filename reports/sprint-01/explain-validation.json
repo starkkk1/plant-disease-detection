@@ -1,0 +1,76 @@
+﻿{
+    "cpu_threads":  4,
+    "models":  [
+                   {
+                       "checkpoint":  "convnext_tiny",
+                       "model_version":  "convnext_tiny:cd60fb91a5c4",
+                       "target":  {
+                                      "class_id":  0,
+                                      "label":  "Tomato___Bacterial_spot",
+                                      "confidence":  0.8990755677223206
+                                  },
+                       "target_layer":  "stages.3.blocks.2.conv_dw",
+                       "has_signal":  true,
+                       "elapsed_ms":  3623.36,
+                       "prediction_unchanged_afterward":  true
+                   },
+                   {
+                       "checkpoint":  "efficientnet_b0",
+                       "model_version":  "efficientnet_b0:c0a285d1bc14",
+                       "target":  {
+                                      "class_id":  0,
+                                      "label":  "Tomato___Bacterial_spot",
+                                      "confidence":  0.9999997615814209
+                                  },
+                       "target_layer":  "blocks.6",
+                       "has_signal":  true,
+                       "elapsed_ms":  208.07,
+                       "prediction_unchanged_afterward":  true
+                   },
+                   {
+                       "checkpoint":  "efficientnet_b0_distilled",
+                       "model_version":  "efficientnet_b0:8cd4521c43c4",
+                       "target":  {
+                                      "class_id":  0,
+                                      "label":  "Tomato___Bacterial_spot",
+                                      "confidence":  0.8433644771575928
+                                  },
+                       "target_layer":  "blocks.6",
+                       "has_signal":  true,
+                       "elapsed_ms":  175.23,
+                       "prediction_unchanged_afterward":  true
+                   },
+                   {
+                       "checkpoint":  "mobilenetv3_small_100",
+                       "model_version":  "mobilenetv3_small_100:90b0a4bed0d2",
+                       "target":  {
+                                      "class_id":  0,
+                                      "label":  "Tomato___Bacterial_spot",
+                                      "confidence":  0.9999997615814209
+                                  },
+                       "target_layer":  "blocks.5",
+                       "has_signal":  true,
+                       "elapsed_ms":  73.45,
+                       "prediction_unchanged_afterward":  true
+                   },
+                   {
+                       "checkpoint":  "mobilenetv3_small_100_distilled",
+                       "model_version":  "mobilenetv3_small_100:05e72798a741",
+                       "target":  {
+                                      "class_id":  0,
+                                      "label":  "Tomato___Bacterial_spot",
+                                      "confidence":  0.7057943940162659
+                                  },
+                       "target_layer":  "blocks.5",
+                       "has_signal":  true,
+                       "elapsed_ms":  50.92,
+                       "prediction_unchanged_afterward":  true
+                   }
+               ],
+    "api_explicit_target_class_9_status":  200,
+    "api_request_id":  "ef9c52ea-807b-4c25-a0d2-662916251817",
+    "python_tests_passed":  59,
+    "browser_tests_passed":  24,
+    "production_build":  "passed",
+    "recorded_at_utc":  "2026-10-09T02:31:50.4396981Z"
+}

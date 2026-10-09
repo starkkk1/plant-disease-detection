@@ -1,8 +1,8 @@
 ﻿{
-    "recorded_at_utc":  "2026-10-08T09:45:13.7925889Z",
-    "python_tests_passed":  45,
-    "backend_tests_passed":  19,
-    "browser_tests_passed":  18,
+    "recorded_at_utc":  "2026-10-09T02:31:50.3113408Z",
+    "python_tests_passed":  59,
+    "backend_tests_passed":  28,
+    "browser_tests_passed":  24,
     "production_build":  "passed",
     "browser":  "Microsoft Edge Chromium; Pixel 7 emulation and desktop",
     "real_cpu_api_e2e":  "passed",
@@ -19,8 +19,11 @@
     "postcss_version":  "8.5.29",
     "frontend_clean_install":  "passed (npm ci --ignore-scripts)",
     "browser_servers_started_fresh":  true,
-    "browser_test_seconds":  36.2,
+    "browser_test_seconds":  52.5,
     "runtime_dependency_findings":  0,
     "build_lint_dependency_findings":  9,
-    "aws_work_deferred_by_user":  true
+    "aws_work_deferred_by_user":  true,
+    "gradcam_tests_passed":  5,
+    "real_cpu_explain_e2e":  "passed",
+    "gradcam_checkpoints_verified":  5
 }

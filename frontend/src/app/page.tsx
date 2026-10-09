@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Camera, Check, ChevronRight, FlaskConical, ImagePlus, Leaf, Loader2, RotateCcw, X } from "lucide-react";
-import { PredictionError, PredictionResult, realAdapter, validateFile } from "@/lib/prediction-api";
+import { ExplanationResult, explainImage, PredictionError, PredictionResult, realAdapter, validateFile } from "@/lib/prediction-api";
 import { mockAdapter } from "@/lib/mock-prediction";
 
 const diseaseNames: Record<string, string> = {
@@ -26,6 +27,9 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<PredictionError | null>(null);
   const [demo, setDemo] = useState(false);
+  const [explanation, setExplanation] = useState<ExplanationResult | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  const [explainError, setExplainError] = useState<PredictionError | null>(null);
   const gallery = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
   const active = useRef<AbortController | null>(null);
@@ -43,6 +47,7 @@ export default function Home() {
     active.current?.abort();
     generation.current += 1;
     setImage(null); setResult(null); setError(null); setBusy(false);
+    setExplanation(null); setExplaining(false); setExplainError(null);
   }
 
   function choose(file?: File) {
@@ -53,11 +58,12 @@ export default function Home() {
   }
 
   async function analyze() {
-    if (!image || busy) return;
+    if (!image || busy || explaining) return;
     const operation = ++generation.current;
     const controller = new AbortController();
     active.current = controller;
     setBusy(true); setError(null); setResult(null);
+    setExplanation(null); setExplainError(null);
     try {
       const response = await (demo ? mockAdapter : realAdapter).predict(image, controller.signal);
       if (generation.current === operation) setResult(response);
@@ -70,11 +76,32 @@ export default function Home() {
     }
   }
 
+  async function explain() {
+    if (!image || !result || result.is_mock || busy || explaining) return;
+    const operation = ++generation.current;
+    const controller = new AbortController();
+    active.current = controller;
+    setExplaining(true); setExplainError(null);
+    try {
+      const response = await explainImage(image, controller.signal, result.predictions[0].class_id);
+      if (response.model_version !== result.model_version) {
+        throw new PredictionError("model_changed", "Mô hình đã thay đổi. Hãy nhận diện lại ảnh trước khi xem giải thích.");
+      }
+      if (generation.current === operation) setExplanation(response);
+    } catch (error) {
+      if (generation.current === operation && error instanceof PredictionError && error.code !== "cancelled") {
+        setExplainError(error);
+      }
+    } finally {
+      if (generation.current === operation) { setExplaining(false); active.current = null; }
+    }
+  }
+
   return (
     <main className="leaf-app">
       <div className="leaf-shell">
         <header className="leaf-header">
-          <a href="/" className="leaf-brand" aria-label="Lá, trang chủ"><Leaf size={22} /><span>Lá<span className="brand-dot">.</span></span></a>
+          <Link href="/" className="leaf-brand" aria-label="Lá, trang chủ"><Leaf size={22} /><span>Lá<span className="brand-dot">.</span></span></Link>
           <span className="leaf-header-note">Dành cho lá cà chua</span>
         </header>
 
@@ -89,7 +116,7 @@ export default function Home() {
             <div className="leaf-section-heading"><span className="leaf-step">01</span><h2 id="upload-title">Ảnh chiếc lá</h2></div>
             <div className={`leaf-preview ${preview ? "has-image" : ""}`}
                  onDragOver={(event) => event.preventDefault()}
-                 onDrop={(event) => { event.preventDefault(); if (!busy) choose(event.dataTransfer.files[0]); }}>
+                 onDrop={(event) => { event.preventDefault(); if (!busy && !explaining) choose(event.dataTransfer.files[0]); }}>
               {preview ? (
                 <>
                   {/* Blob URLs are local previews, not optimized remote images. */}
@@ -104,16 +131,16 @@ export default function Home() {
               )}
             </div>
 
-            <input ref={gallery} aria-label="Chọn ảnh lá" type="file" accept="image/jpeg,image/png" className="sr-only" disabled={busy}
+            <input ref={gallery} aria-label="Chọn ảnh lá" type="file" accept="image/jpeg,image/png" className="sr-only" disabled={busy || explaining}
               onChange={(event) => { choose(event.target.files?.[0]); event.target.value = ""; }} />
-            <input ref={camera} aria-label="Chụp ảnh lá" type="file" accept="image/jpeg,image/png" capture="environment" className="sr-only" disabled={busy}
+            <input ref={camera} aria-label="Chụp ảnh lá" type="file" accept="image/jpeg,image/png" capture="environment" className="sr-only" disabled={busy || explaining}
               onChange={(event) => { choose(event.target.files?.[0]); event.target.value = ""; }} />
             <div className="leaf-upload-actions">
-              <button onClick={() => camera.current?.click()} disabled={busy}><Camera size={19} />Chụp ảnh</button>
-              <button onClick={() => gallery.current?.click()} disabled={busy}><ImagePlus size={19} />Chọn ảnh</button>
+              <button onClick={() => camera.current?.click()} disabled={busy || explaining}><Camera size={19} />Chụp ảnh</button>
+              <button onClick={() => gallery.current?.click()} disabled={busy || explaining}><ImagePlus size={19} />Chọn ảnh</button>
             </div>
             <p className="leaf-file-note">JPEG hoặc PNG · Tối đa 5 MB</p>
-            <button className="leaf-analyze" onClick={analyze} disabled={!image || busy}>
+            <button className="leaf-analyze" onClick={analyze} disabled={!image || busy || explaining}>
               {busy ? <><Loader2 className="leaf-spinner" size={19} />Đang nhận diện…</> : <>{error && image ? "Thử lại" : "Nhận diện chiếc lá"}<ChevronRight size={19} /></>}
             </button>
             {busy && <button className="leaf-text-button" onClick={() => { active.current?.abort(); generation.current += 1; setBusy(false); }}>Huỷ nhận diện</button>}
@@ -140,6 +167,25 @@ export default function Home() {
                     </div>
                   ))}</div>
                   <p className="leaf-model-version">Phiên bản mô hình <code>{result.model_version}</code></p>
+                  {!result.is_mock && <div className="leaf-explanation" aria-busy={explaining}>
+                    <button className="leaf-text-button" onClick={explain} disabled={explaining}>
+                      {explaining ? <><Loader2 className="leaf-spinner" size={16} />Đang tạo bản đồ…</> :
+                        explainError ? "Thử lại Grad-CAM++" : "Xem giải thích Grad-CAM++"}
+                    </button>
+                    {explaining && <button className="leaf-text-button" onClick={() => {
+                      active.current?.abort(); generation.current += 1; setExplaining(false);
+                    }}>Huỷ giải thích</button>}
+                    {explainError && <p role="alert" className="leaf-explain-error">{explainError.message}</p>}
+                    {explanation && <figure>
+                      {/* The API supplies a validated PNG data URL for the explanation. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={`data:image/png;base64,${explanation.explanation.overlay_png_base64}`}
+                           width={explanation.explanation.width} height={explanation.explanation.height}
+                           alt="Bản đồ Grad-CAM++ trên ảnh lá" />
+                      <figcaption>Vùng đỏ/vàng có đóng góp dương cao hơn cho lớp đang xem. Đây là bản đồ của mô hình, không phải vùng bệnh đã được xác nhận.</figcaption>
+                      {!explanation.explanation.has_signal && <p>Không có tín hiệu đóng góp dương rõ ràng cho lớp này.</p>}
+                    </figure>}
+                  </div>}
                   <button className="leaf-text-button" onClick={reset}><RotateCcw size={15} />Nhận diện ảnh khác</button>
                 </div>
               ) : (
@@ -151,9 +197,9 @@ export default function Home() {
         </div>
 
         <footer className="leaf-footer">
-          <label className="leaf-demo-toggle"><input type="checkbox" checked={demo} disabled={busy} onChange={(event) => { reset(); setDemo(event.target.checked); }} /><FlaskConical size={15} />Dùng kết quả mẫu để xem giao diện</label>
+          <label className="leaf-demo-toggle"><input type="checkbox" checked={demo} disabled={busy || explaining} onChange={(event) => { reset(); setDemo(event.target.checked); }} /><FlaskConical size={15} />Dùng kết quả mẫu để xem giao diện</label>
           {demo && <p className="leaf-demo-note">Chế độ minh hoạ · Không gọi dịch vụ nhận diện</p>}
-          <a href="/research">Công cụ nghiên cứu và tìm kiếm <ChevronRight size={13} /></a>
+          <Link href="/research">Công cụ nghiên cứu và tìm kiếm <ChevronRight size={13} /></Link>
         </footer>
       </div>
     </main>

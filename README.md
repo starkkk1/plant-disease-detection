@@ -8,6 +8,8 @@ The Sprint 01 MVP now includes a responsive Vietnamese phone UI and a standalone
 
 The local API/UI are verified with real weights; cloud readiness still needs an authenticated company AWS profile, permitted Region, named cost approver and budget. No AWS resources were created.
 
+`POST /explain` now provides Grad-CAM++ heatmaps and PNG overlays using the same loaded checkpoint. After a real prediction, choose **Xem giải thích Grad-CAM++** in the phone UI. See [the explanation API guide](docs/explain.md) for optional target classes, errors and validation.
+
 ## Project Title
 
 **Robust, Lightweight and Explainable Deep Learning for Tomato Leaf Disease Classification**

@@ -15,6 +15,19 @@ export interface PredictionResult {
   predictions: Prediction[];
 }
 
+export interface ExplanationResult extends PredictionResult {
+  explanation: {
+    method: "gradcam++";
+    target: Prediction;
+    target_layer: string;
+    width: number;
+    height: number;
+    has_signal: boolean;
+    overlay_png_base64: string;
+    heatmap_png_base64: string;
+  };
+}
+
 export interface PredictionAdapter {
   predict(file: File, signal?: AbortSignal): Promise<PredictionResult>;
 }
@@ -30,6 +43,8 @@ const messages: Record<string, string> = {
   service_busy: "Dịch vụ đang bận. Vui lòng thử lại sau vài giây.",
   prediction_timeout: "Nhận diện mất quá nhiều thời gian. Vui lòng thử lại.",
   prediction_failed: "Chưa thể nhận diện ảnh này. Hãy thử lại hoặc chọn ảnh khác.",
+  explanation_unavailable: "Grad-CAM++ chưa sẵn sàng cho mô hình này.",
+  explanation_failed: "Chưa thể tạo bản đồ giải thích. Vui lòng thử lại.",
 };
 
 export class PredictionError extends Error {
@@ -74,8 +89,8 @@ function parseResult(data: unknown): PredictionResult {
   return result;
 }
 
-export const realAdapter: PredictionAdapter = {
-  async predict(file, signal) {
+async function requestImage<T>(file: File, endpoint: string, parse: (data: unknown) => T,
+                               signal?: AbortSignal, classId?: number): Promise<T> {
     validateFile(file);
     const controller = new AbortController();
     let timedOut = false;
@@ -87,14 +102,20 @@ export const realAdapter: PredictionAdapter = {
       const form = new FormData();
       form.append("file", file);
       form.append("top_k", "3");
-      const response = await fetch(`${apiBaseUrl()}/predict`, { method: "POST", body: form, signal: controller.signal });
+      if (classId !== undefined) form.append("class_id", String(classId));
+      const response = await fetch(`${apiBaseUrl()}/${endpoint}`, { method: "POST", body: form, signal: controller.signal });
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         const code = data?.error?.code || "http_error";
         throw new PredictionError(code, messages[code] || "Dịch vụ gặp lỗi. Vui lòng thử lại sau.",
                                   data?.request_id || response.headers.get("X-Request-ID") || undefined);
       }
-      try { return parseResult(data); }
+      if (endpoint === "predict" && data?.model_status && Array.isArray(data.predictions) &&
+          data.predictions.some((prediction: Record<string, unknown> | null) => prediction && "class_name" in prediction)) {
+        throw new PredictionError("api_version_mismatch",
+          "Dịch vụ đang dùng phiên bản API cũ. Cần cập nhật dịch vụ nhận diện.");
+      }
+      try { return parse(data); }
       catch { throw new PredictionError("invalid_response", "Dịch vụ trả về kết quả chưa hợp lệ. Vui lòng thử lại."); }
     } catch (error) {
       if (error instanceof PredictionError) throw error;
@@ -105,5 +126,28 @@ export const realAdapter: PredictionAdapter = {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);
     }
-  },
+}
+
+export const realAdapter: PredictionAdapter = {
+  predict: (file, signal) => requestImage(file, "predict", parseResult, signal),
 };
+
+function parseExplanation(data: unknown): ExplanationResult {
+  const result = parseResult(data) as ExplanationResult;
+  const explanation = result.explanation;
+  const png = (value: unknown) => typeof value === "string" && value.startsWith("iVBORw0KGgo") &&
+    value.length < 4_000_000 && /^[A-Za-z0-9+/]+={0,2}$/.test(value);
+  if (!explanation || explanation.method !== "gradcam++" ||
+      !Number.isInteger(explanation.width) || explanation.width <= 0 ||
+      !Number.isInteger(explanation.height) || explanation.height <= 0 ||
+      typeof explanation.has_signal !== "boolean" || typeof explanation.target_layer !== "string" ||
+      !explanation.target_layer || !png(explanation.overlay_png_base64) || !png(explanation.heatmap_png_base64)) {
+    throw new Error("invalid explanation");
+  }
+  parseResult({ ...result, predictions: [explanation.target] });
+  return result;
+}
+
+export function explainImage(file: File, signal?: AbortSignal, classId?: number): Promise<ExplanationResult> {
+  return requestImage(file, "explain", parseExplanation, signal, classId);
+}

@@ -1,0 +1,20 @@
+{
+  "recorded_at_utc": "2026-10-09T03:39:21.971Z",
+  "cause": "Legacy run_search_api.py was serving port 8000 with class_name/probability instead of classification v1",
+  "classification_origin": "http://localhost:8000",
+  "frontend_origin": "http://localhost:3000",
+  "prediction_status": 200,
+  "explanation_status": 200,
+  "model_version": "mobilenetv3_small_100:90b0a4bed0d2",
+  "is_mock": false,
+  "prediction": {
+    "class_id": 0,
+    "label": "Tomato___Bacterial_spot",
+    "confidence": 0.9999997615814209
+  },
+  "overlay_width": 224,
+  "legacy_api_regression_tests_passed": 2,
+  "production_build": "passed",
+  "live_browser_error_count": 0,
+  "services_left_running": true
+}

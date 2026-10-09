@@ -54,8 +54,81 @@ def test_health_and_openapi(client):
     assert response.json()["is_mock"] is False  # fixture injected only by tests
     assert client.get("/docs").status_code == 200
     schema = client.get("/openapi.json").json()
-    assert "/health" in schema["paths"] and "/predict" in schema["paths"]
+    assert all(path in schema["paths"] for path in ("/health", "/predict", "/explain"))
     assert "multipart/form-data" in schema["paths"]["/predict"]["post"]["requestBody"]["content"]
+    assert "multipart/form-data" in schema["paths"]["/explain"]["post"]["requestBody"]["content"]
+
+
+def explanation_fixture(predictor, image, top_k=3, class_id=None):
+    assert image.mode == "RGB"
+    result = predictor.predict(image, top_k=top_k)
+    target = result["predictions"][0] if class_id is None else {
+        "class_id": class_id, "label": predictor.class_names[class_id], "confidence": 0.1}
+    result["explanation"] = {"method": "gradcam++", "target": target, "target_layer": "test-layer",
+        "width": 17, "height": 23, "has_signal": True,
+        "overlay_png_base64": "fixture", "heatmap_png_base64": "fixture"}
+    return result
+
+
+@pytest.mark.parametrize("class_id", [None, "9"])
+def test_explain_contract(client, monkeypatch, class_id):
+    monkeypatch.setattr("src.inference.explain.explain_image", explanation_fixture)
+    data = {"top_k": "2"}
+    if class_id is not None:
+        data["class_id"] = class_id
+    response = client.post("/explain", files={"file": ("leaf.png", image_bytes(), "image/png")}, data=data)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["request_id"] == response.headers["x-request-id"]
+    assert body["is_mock"] is False and len(body["predictions"]) == 2
+    assert body["explanation"]["target"]["class_id"] == (0 if class_id is None else 9)
+
+
+@pytest.mark.parametrize("class_id", ["-1", "11", "nope"])
+def test_explain_invalid_target(client, class_id):
+    assert_error(client.post("/explain", files={"file": ("leaf.png", image_bytes(), "image/png")},
+                            data={"class_id": class_id}), 422, "invalid_request")
+
+
+@pytest.mark.parametrize("mime,data,status,code", [
+    ("text/plain", b"bad", 415, "unsupported_image"),
+    ("image/png", b"bad", 400, "invalid_image"),
+])
+def test_explain_uses_image_validation(client, mime, data, status, code):
+    assert_error(client.post("/explain", files={"file": ("leaf", data, mime)}), status, code)
+
+
+def test_explain_unavailable_and_failure_are_safe(client, monkeypatch):
+    from src.inference.explain import ExplanationUnavailable
+    def unavailable(*args, **kwargs):
+        raise ExplanationUnavailable("private/path")
+    monkeypatch.setattr("src.inference.explain.explain_image", unavailable)
+    files = {"file": ("leaf.png", image_bytes(), "image/png")}
+    response = client.post("/explain", files=files)
+    assert_error(response, 503, "explanation_unavailable")
+    assert "private" not in response.text
+    def broken(*args, **kwargs):
+        raise RuntimeError("private/path")
+    monkeypatch.setattr("src.inference.explain.explain_image", broken)
+    response = client.post("/explain", files=files)
+    assert_error(response, 500, "explanation_failed")
+    assert "private" not in response.text
+    assert client.post("/predict", files=files).status_code == 200
+
+
+def test_explain_timeout_shares_prediction_slot(settings, monkeypatch):
+    def slow(*args, **kwargs):
+        time.sleep(0.2)
+        return explanation_fixture(*args, **kwargs)
+    monkeypatch.setattr("src.inference.explain.explain_image", slow)
+    with TestClient(create_app(replace(settings, inference_timeout=0.03, queue_timeout=0.01),
+                               lambda _: FakePredictor())) as client:
+        files = {"file": ("leaf.png", image_bytes(), "image/png")}
+        assert_error(client.post("/explain", files=files), 504, "prediction_timeout")
+        assert_error(client.post("/predict", files=files), 503, "service_busy")
+        assert client.get("/health").status_code == 200
+        time.sleep(0.22)
+        assert client.post("/predict", files=files).status_code == 200
 
 
 @pytest.mark.parametrize("format,mime,mode", [("PNG", "image/png", "RGBA"),

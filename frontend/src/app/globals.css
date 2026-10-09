@@ -87,6 +87,10 @@ button:disabled { opacity: .45; cursor: not-allowed; }
 .leaf-demo-banner svg { flex-shrink: 0; }
 .leaf-demo-note { color: #e4c485; font-size: 11px; margin: 0 0 8px 25px; }
 .leaf-spinner { animation: leaf-spin 1s linear infinite; }
+.leaf-explanation { margin-top: 16px; border-top: 1px solid #acc99925; padding-top: 8px; }
+.leaf-explanation img { display: block; width: 100%; max-width: 320px; height: auto; margin: 12px auto; border-radius: 12px; }
+.leaf-explanation figcaption, .leaf-explanation figure p { font-size: 11px; color: #a3b498; line-height: 1.7; }
+.leaf-explain-error { font-size: 12px; color: #edbe96; line-height: 1.6; }
 @keyframes leaf-spin { to { transform: rotate(360deg); } }
 @media (min-width: 768px) { .leaf-app { padding: 0 32px 42px; } .leaf-header { padding: 29px 0; } .leaf-intro { padding: 48px 0 35px; } .leaf-workspace { grid-template-columns: 1fr 1fr; gap: 24px; } .leaf-card { padding: 28px; } .leaf-preview { height: 290px; } .leaf-result-placeholder { min-height: 335px; } }
 @media (prefers-reduced-motion: reduce) { .leaf-spinner { animation: none; } }

@@ -1,6 +1,6 @@
 # Classification deployment architecture — issue #6
 
-Prepared 2026-10-08. Local MVP: Next.js phone browser UI → FastAPI → one CPU model in one container. Qdrant, search encoders, Grad-CAM, S3, Cognito and DynamoDB are optional follow-ups, not classification startup dependencies.
+Prepared 2026-10-08; explanation integration added 2026-10-09. Local MVP: Next.js phone browser UI → FastAPI → one CPU model in one container. `/predict` and the optional `/explain` Grad-CAM++ action share the model and CPU slot. Qdrant, search encoders, S3, Cognito and DynamoDB remain optional follow-ups. Grad-CAM imports are lazy and are not required for classification startup; its dependency is included for the explanation endpoint.
 
 ```mermaid
 flowchart LR

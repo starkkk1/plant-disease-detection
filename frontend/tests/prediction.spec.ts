@@ -22,7 +22,7 @@ test("empty state, camera input, keyboard actions and no horizontal overflow", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
 });
 
-test("real end-to-end image prediction with CPU checkpoint", async ({ page }, testInfo) => {
+test("real end-to-end prediction and Grad-CAM++ with CPU checkpoint", async ({ page }, testInfo) => {
   await page.getByLabel("Chọn ảnh lá", { exact: true }).setInputFiles(fixture);
   await expect(page.getByAltText("Ảnh lá đã chọn")).toBeVisible();
   const completed = page.waitForResponse((res) => res.url().endsWith("/predict") && res.request().method() === "POST");
@@ -36,6 +36,20 @@ test("real end-to-end image prediction with CPU checkpoint", async ({ page }, te
   await expect(page.getByText("Kết quả mẫu · Không phải phân tích ảnh này")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   if (testInfo.project.name === "mobile") await page.screenshot({ path: "../reports/sprint-01/frontend-mobile.png", fullPage: true });
+  const explained = page.waitForResponse((res) => res.url().endsWith("/explain") && res.request().method() === "POST");
+  await page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true }).click();
+  const explainResponse = await explained;
+  expect(explainResponse.status()).toBe(200);
+  const explanation = await explainResponse.json();
+  expect(explanation.model_version).toBe(result.model_version);
+  expect(explanation.explanation.target.class_id).toBe(result.predictions[0].class_id);
+  expect(explanation.explanation.method).toBe("gradcam++");
+  const overlay = page.getByAltText("Bản đồ Grad-CAM++ trên ảnh lá");
+  await expect(overlay).toBeVisible();
+  await expect.poll(() => overlay.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBe(224);
+  await expect(page.getByRole("heading", { name: "Đốm vi khuẩn", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  if (testInfo.project.name === "mobile") await page.screenshot({ path: "../reports/sprint-01/frontend-explain-mobile.png", fullPage: true });
   await page.getByRole("button", { name: "Nhận diện ảnh khác" }).click();
   await expect(page.getByAltText("Ảnh lá đã chọn")).toHaveCount(0);
 });
@@ -48,7 +62,51 @@ test("mock mode is explicit and does not call the backend", async ({ page }) => 
   await page.getByRole("button", { name: "Nhận diện chiếc lá" }).click();
   await expect(page.getByText("Kết quả mẫu · Không phải phân tích ảnh này")).toBeVisible();
   await expect(page.getByText("demo-mock-v1", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true })).toHaveCount(0);
   expect(called).toBe(false);
+});
+
+test("explanation errors preserve prediction and support retry", async ({ page }) => {
+  await page.route("**/predict", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) }));
+  let attempts = 0;
+  await page.route("**/explain", (route) => {
+    attempts++;
+    expect(route.request().postData()).toContain('name="class_id"');
+    return route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({
+      request_id: response.request_id, error: { code: "explanation_unavailable", message: "Unavailable" },
+    }) });
+  });
+  await page.getByLabel("Chọn ảnh lá", { exact: true }).setInputFiles(fixture);
+  await page.getByRole("button", { name: "Nhận diện chiếc lá" }).click();
+  await page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("Grad-CAM++ chưa sẵn sàng");
+  await expect(page.getByRole("heading", { name: "Đốm vi khuẩn", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Thử lại Grad-CAM++", exact: true }).click();
+  await expect.poll(() => attempts).toBe(2);
+});
+
+test("malformed explanation is rejected while keeping the result", async ({ page }) => {
+  await page.route("**/predict", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) }));
+  await page.route("**/explain", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...response, explanation: {} }) }));
+  await page.getByLabel("Chọn ảnh lá", { exact: true }).setInputFiles(fixture);
+  await page.getByRole("button", { name: "Nhận diện chiếc lá" }).click();
+  await page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("kết quả chưa hợp lệ");
+  await expect(page.getByAltText("Bản đồ Grad-CAM++ trên ảnh lá")).toHaveCount(0);
+  await expect(page.getByText(response.model_version, { exact: true })).toBeVisible();
+});
+
+test("cancel explanation keeps prediction and clears loading", async ({ page }) => {
+  await page.route("**/predict", (route) => route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(response) }));
+  await page.route("**/explain", () => {});
+  await page.getByLabel("Chọn ảnh lá", { exact: true }).setInputFiles(fixture);
+  await page.getByRole("button", { name: "Nhận diện chiếc lá" }).click();
+  await page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Chọn ảnh", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Huỷ giải thích", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Đốm vi khuẩn", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true })).toBeEnabled();
+  await expect(page.getByRole("main").getByRole("alert")).toHaveCount(0);
 });
 
 test("unsupported files and oversized uploads are rejected before fetch", async ({ page }) => {
@@ -92,6 +150,18 @@ test("invalid response is handled instead of rendering NaN confidence", async ({
   await page.getByLabel("Chọn ảnh lá", { exact: true }).setInputFiles(fixture);
   await page.getByRole("button", { name: "Nhận diện chiếc lá" }).click();
   await expect(page.getByRole("main").getByRole("alert")).toContainText("kết quả chưa hợp lệ");
+});
+
+test("legacy search API is identified rather than accepted as a real prediction", async ({ page }) => {
+  await page.route("**/predict", (route) => route.fulfill({ status: 200, contentType: "application/json",
+    body: JSON.stringify({ model_status: "loaded", predictions: [
+      { class_name: "Tomato___Bacterial_spot", probability: .84, gradcam_path: "legacy-file.jpg" },
+    ] }) }));
+  await page.getByLabel("Chọn ảnh lá", { exact: true }).setInputFiles(fixture);
+  await page.getByRole("button", { name: "Nhận diện chiếc lá" }).click();
+  await expect(page.getByRole("main").getByRole("alert")).toContainText("phiên bản API cũ");
+  await expect(page.getByText("demo-mock-v1", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Xem giải thích Grad-CAM++", exact: true })).toHaveCount(0);
 });
 
 test("cancel discards the pending response and retains the preview", async ({ page }) => {

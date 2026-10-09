@@ -11,7 +11,7 @@ Terminal 1 (this command also works from `D:\Code\python` or `frontend/`):
 & D:\Code\python\.venv\Scripts\python.exe D:\Code\python\plant-disease-detection\scripts\run_api.py --host 0.0.0.0 --port 8000
 ```
 
-For a new environment, install `backend/requirements.txt` with a supported CPython interpreter. It installs CPU-only torch/torchvision and the API dependencies without Qdrant, Streamlit or Grad-CAM. Keep the real `checkpoints/mobilenetv3_small_100_best.pth`; the verified class map is included in `configs/class_to_idx.sprint01.json`. The API fails readiness if the checkpoint is absent or incompatible. No retraining is needed.
+For a new environment, install `backend/requirements.txt` with a supported CPython interpreter. It installs CPU-only torch/torchvision, Grad-CAM++ and the API dependencies without Qdrant or Streamlit. Keep the real `checkpoints/mobilenetv3_small_100_best.pth`; the verified class map is included in `configs/class_to_idx.sprint01.json`. The API fails readiness if the checkpoint is absent or incompatible. No retraining is needed.
 
 Terminal 2:
 
@@ -23,6 +23,8 @@ npm run dev -- --hostname 0.0.0.0 --port 3000
 
 Open `http://localhost:3000`; Swagger is `http://localhost:8000/docs`, and readiness is `http://localhost:8000/health`. Choose or capture a JPEG/PNG photo, preview it and press the recognition button. The unchecked demo toggle uses the real API; explicitly checking it enables labeled frontend sample results. It is never enabled automatically when the API fails.
 
+After a real result, press **Xem giải thích Grad-CAM++** to view the overlay for the top predicted class. The new `POST /explain` route also accepts an optional training `class_id`. Explanation can be cancelled/retried without discarding the prediction. It is unavailable in demo mode. Restart an existing backend process and restart/rebuild the frontend to load the new feature. See [explain.md](docs/explain.md) for requests, response images and CPU validation.
+
 ### If Python cannot import `backend`
 
 `backend` belongs to `plant-disease-detection/`, not its parent folder or `frontend/`. The launcher above supplies Uvicorn's `--app-dir` using its own file location, so it resolves the project's module regardless of the terminal's current directory. An equivalent direct command is:
@@ -32,6 +34,12 @@ Open `http://localhost:3000`; Swagger is `http://localhost:8000/docs`, and readi
 ```
 
 For a different checkout, replace the two absolute paths with its Python environment and project directory. When already in the repository root with the correct environment activated, `python scripts/run_api.py --port 8000` also works. Do not run `python backend/main.py` directly; its package imports require the repository on Python's module path. Check the interpreter with `python -c "import sys; print(sys.executable)"`: this workstation's default `python` is MSYS and does not contain the verified ML dependencies.
+
+### If the web reports an invalid API response
+
+Check `http://localhost:8000/health`: the classification service must return `status: "ok"`, `api_version: "1.0"` and a real `model_version`. A 404 here, combined with `/predict` returning `model_status` and `class_name`/`probability`, identifies the old search API running on the classification port. Stop that search process and start **`scripts/run_api.py`** using the command above. Refresh the web page afterward. The frontend rejects legacy predictions and identifies the API version mismatch instead of inventing missing class IDs/model versions.
+
+**`scripts/run_search_api.py` is the research search launcher**, now using port **8001** by default. It does not replace the classification API on port **8000** and does not provide the new `/explain` endpoint. Both services can run separately when search is needed.
 
 To set a hosted or different backend, put `NEXT_PUBLIC_API_URL=https://YOUR_APPROVED_API_ORIGIN` in `frontend/.env.local` or build environment, then restart/rebuild Next.js. This is a public endpoint setting, not a secret. If unset, the client uses the page hostname at port 8000. `backend/.env.example` documents backend variables; set them in the process environment rather than assuming the file is automatically loaded.
 
@@ -58,7 +66,7 @@ npm run test:e2e
 
 Playwright runs real-model and mocked-error scenarios on mobile and desktop and starts local services on ports 8000/3005 if needed. It uses installed Microsoft Edge on Windows; on other systems install Chromium with `npx playwright install chromium`. A missing checkpoint prevents the real E2E test from passing; the mock UI is a separate explicit scenario.
 
-On this workstation, Windows temp-folder ACLs required the final Python run to use `--basetemp D:\Code\python\plant-disease-detection\.tmp\pytest-app-final-01`; choose a fresh directory under the workspace if the default temp folder is inaccessible. After upgrading Next.js to 15.5.27 and patching PostCSS, a clean `npm ci --ignore-scripts`, production build, and browser run with fresh local servers succeeded. `--output test-results-updated --reporter list` was used for that browser run. Final results: **45 Python tests, 18 browser tests passed**, and the production build succeeded. Existing research-page image-optimization lint warnings remain non-fatal. Runtime dependency audit reports zero findings; remaining build/lint findings are recorded in [frontend-dependency-review.md](docs/frontend-dependency-review.md).
+On this workstation, Windows temp-folder ACLs require a fresh workspace temp directory: the Grad-CAM++ test run used `-p no:cacheprovider --basetemp D:\Code\python\plant-disease-detection\.tmp\pytest-explain-01`. Choose a new directory if rerunning under restricted ACLs. Next.js 15.5.27 with patched PostCSS built successfully; Playwright started fresh local servers using `--output test-results-explain --reporter list`. Final results after `/explain` integration on 2026-10-09: **59 Python tests, 24 browser tests passed**, including real-model Grad-CAM++. Existing research-page image-optimization lint warnings remain non-fatal. The recorded runtime dependency audit from 2026-10-08 reports zero findings; remaining build/lint findings are in [frontend-dependency-review.md](docs/frontend-dependency-review.md).
 
 Evidence: `reports/sprint-01/api-live-smoke.json`, `reports/sprint-01/frontend-mobile.png`, and [delivery status](docs/sprint-01-app-delivery.md). API details are in [api-contract.md](docs/api-contract.md), phone decision in [mobile-plan.md](docs/mobile-plan.md), cloud design in [architecture.md](docs/architecture.md), and company-access gaps in [aws-readiness.md](docs/aws-readiness.md). Docker and paid AWS deployment have not been run.
 

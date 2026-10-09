@@ -28,6 +28,21 @@ class HealthResponse(BaseModel):
     supported_formats: list[str] = ["image/jpeg", "image/png"]
 
 
+class Explanation(BaseModel):
+    method: Literal["gradcam++"]
+    target: Prediction
+    target_layer: str
+    width: int = Field(gt=0)
+    height: int = Field(gt=0)
+    has_signal: bool
+    overlay_png_base64: str
+    heatmap_png_base64: str
+
+
+class ExplanationResponse(PredictionResponse):
+    explanation: Explanation
+
+
 class ErrorDetail(BaseModel):
     code: str
     message: str

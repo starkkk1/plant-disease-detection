@@ -8,6 +8,7 @@ sys.path.append(project_root)
 os.chdir(project_root)
 
 if __name__ == "__main__":
-    print("Starting Plant Disease Search API on http://0.0.0.0:8000")
+    print("Starting Plant Disease Search API on http://0.0.0.0:8001")
+    print("For classification and Grad-CAM++, run scripts/run_api.py on port 8000.")
     # Sử dụng reload=True cho quá trình development
-    uvicorn.run("src.search.api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("src.search.api:app", host="0.0.0.0", port=8001, reload=True)

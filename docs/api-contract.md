@@ -1,6 +1,6 @@
 # Classification API contract v1 — issue #4
 
-Implemented by `backend/main.py`, consumed by `frontend/src/lib/prediction-api.ts`. This is the local MVP contract chosen for the implementation; team review can use the examples and generated OpenAPI. It does not require Qdrant, a text encoder, image search or Grad-CAM.
+Implemented by `backend/main.py`, consumed by `frontend/src/lib/prediction-api.ts`. This is the local MVP contract chosen for the implementation; team review can use the examples and generated OpenAPI. It does not require Qdrant, a text encoder or image search. Prediction does not run Grad-CAM; the optional `/explain` action uses Grad-CAM++.
 
 ## Existing backend audit
 
@@ -64,6 +64,10 @@ HTTP 200 contains ranked predictions:
 
 The example is from the real local smoke run, rounded for readability. Timing includes handler upload read, queue wait, image validation and inference; it is not the controlled model latency from the baseline. Labels and class IDs follow the verified training mapping. `model_version` identifies the architecture and first twelve checkpoint SHA-256 characters. Confidence is softmax, not calibrated certainty; the returned top-k scores need not sum to one. The API never substitutes mock results. The frontend mock adapter uses `is_mock=true` and `demo-mock-v1` only after explicit user selection.
 
+## POST `/explain`
+
+Adds Grad-CAM++ explanation to the same multipart image workflow. Accepts `file`, `top_k` (default 3), and optional `class_id` (0–10; omit for the top predicted class). Returns all prediction fields plus an `explanation` object containing target class/confidence, method, layer, dimensions, signal flag and base64 PNG overlay/heatmap. No image files are served by path. See [explain.md](explain.md) for the full contract and examples. `/predict` is unchanged.
+
 ## Validation, limits and timeout
 
 | Limit | Default | Behavior |
@@ -74,7 +78,7 @@ The example is from the real local smoke run, rounded for readability. Timing in
 | Accepted types | JPEG, PNG | Actual decoder format must match media type; unsupported type gives 415 |
 | CPU calls in flight | 1 per worker | One executor and semaphore, no unbounded inference queue |
 | Queue wait | 1 second | 503 `service_busy` if occupied |
-| Decode + prediction wait | 20 seconds | 504 `prediction_timeout` |
+| Decode + prediction/explanation wait | 20 seconds | 504 `prediction_timeout`; both endpoints share the CPU slot |
 | Browser request | 25 seconds | Abort fetch and show retry; user can also cancel |
 
 The server's timeout starts after acquiring the slot; upload parsing is bounded by bytes, not by this CPU deadline. A running native CPU operation cannot be forcibly killed safely: a timed-out call retains its slot until completion, while health stays responsive. Use one Uvicorn worker for the MVP; additional workers each load another model and allocate their own slot. Closing or cancelling a browser request does not imply the CPU computation stopped.
@@ -95,12 +99,14 @@ Every handled HTTP error has the same envelope and request ID header:
 | 400 | `invalid_image` | Select another image |
 | 413 | `file_too_large`, `request_too_large`, `image_too_large` | Reduce file or image size |
 | 415 | `unsupported_image` | Supply actual JPEG/PNG with matching MIME |
-| 422 | `invalid_request` | Check file field and top_k |
-| 503 | `model_unavailable`, `service_busy` | Retry after the service is ready |
+| 422 | `invalid_request` | Check file, top_k, and optional class_id on `/explain` |
+| 503 | `model_unavailable`, `service_busy`, `explanation_unavailable` | Retry after the service/dependency is ready |
 | 504 | `prediction_timeout` | Retry; the old call may still occupy the worker |
-| 500 | `prediction_failed` | Show a generic error; correlate server logs using request_id |
+| 500 | `prediction_failed`, `explanation_failed` | Show a generic error; correlate server logs using request_id |
 
 Exception details stay in server logs; they are not rendered in the product UI. Network failures, invalid response JSON/schema and browser aborts are separate frontend errors. No API error automatically switches to a mock result.
+
+A successful HTTP response from the legacy search API (`model_status`, `class_name`, `probability`) is rejected by the client as `api_version_mismatch`. This is a service/port configuration error, not a model inference failure. Classification uses `scripts/run_api.py` on 8000; the research search launcher defaults to 8001. `/health` distinguishes the running service before a demo.
 
 ## Compatibility and evidence
 
