@@ -14,4 +14,4 @@ docs
 tests
 .tmp
 checkpoints/*.pth
-!checkpoints/mobilenetv3_small_100_best.pth
+!checkpoints/mobilenetv3_small_100_distilled_best.pth
