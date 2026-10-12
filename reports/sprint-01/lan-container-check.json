@@ -1,0 +1,32 @@
+{
+  "recorded_at_utc": "2026-10-10T02:18:07.825228+00:00",
+  "frontend_origin": "http://192.168.2.48:3000",
+  "api_origin": "http://192.168.2.48:8000",
+  "container": "plant-disease-api-lan",
+  "image": "plant-disease-api:v2",
+  "prediction_status": 200,
+  "explanation_status": 200,
+  "model_version": "mobilenetv3_small_100:05e72798a741",
+  "api_request_url": "http://192.168.2.48:8000/predict",
+  "is_mock": false,
+  "browser_emulation": "412x915 Chromium on the host PC using its LAN IP",
+  "physical_phone_verified": false,
+  "firewall_rule_added": true,
+  "firewall_change": "approved by user; applied through Administrator UAC and verified",
+  "frontend_status": 200,
+  "health_status": 200,
+  "firewall_rule": {
+    "name": "PlantDisease-LAN-Private",
+    "enabled": true,
+    "direction": "Inbound",
+    "action": "Allow",
+    "profile": "Private",
+    "protocol": "TCP",
+    "local_ports": [
+      3000,
+      8000
+    ],
+    "local_address": "192.168.2.48",
+    "remote_address": "LocalSubnet"
+  }
+}

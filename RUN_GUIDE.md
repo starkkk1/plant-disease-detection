@@ -45,6 +45,8 @@ To set a hosted or different backend, put `NEXT_PUBLIC_API_URL=https://YOUR_APPR
 
 ### Phone on the same Wi-Fi
 
+For the existing Docker image, see [container-lan.md](docs/container-lan.md). The API container serves port 8000; the Next.js frontend must also run on `0.0.0.0:3000`. The Wi-Fi address observed on 2026-10-10 is `192.168.2.48`, so the phone URL is `http://192.168.2.48:3000`. Container port publishing, LAN CORS and the Windows network profile all need to match.
+
 Use the computer's LAN IPv4 address as `YOUR_LAN_IP`. Start the API with the phone page's exact origin allowed:
 
 ```powershell
