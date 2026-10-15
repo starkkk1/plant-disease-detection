@@ -1,4 +1,4 @@
-name: CI and publish container
+name: CI and publish containers
 
 on:
   pull_request:
@@ -53,10 +53,65 @@ jobs:
       - name: Docker build
         run: docker build -f Dockerfile.deploy -t plant-disease-api:ci .
 
+  frontend-image:
+    name: Build and smoke-test frontend container
+    needs: frontend-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Compose configuration
+        run: docker compose config --quiet
+      - name: Build production frontend image
+        run: >-
+          docker build
+          --label org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          --label org.opencontainers.image.revision=${{ github.sha }}
+          -t plant-disease-frontend:ci ./frontend
+      - name: Check runtime health, pages and static assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name frontend-ci -p 127.0.0.1:3000:3000 plant-disease-frontend:ci
+          trap 'docker logs frontend-ci; docker rm -f frontend-ci' EXIT
+          for attempt in $(seq 1 30); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' frontend-ci)
+            if [ "$status" = healthy ]; then break; fi
+            sleep 2
+          done
+          test "$(docker inspect --format '{{.State.Health.Status}}' frontend-ci)" = healthy
+          test "$(docker exec frontend-ci id -u)" != 0
+          curl --fail --silent --show-error http://127.0.0.1:3000/research > /dev/null
+          docker exec -i frontend-ci node <<'JS'
+          const assert = require('node:assert/strict');
+          (async () => {
+            const origin = 'http://127.0.0.1:3000';
+            const response = await fetch(origin);
+            assert.equal(response.status, 200);
+            const html = await response.text();
+            const assets = [...new Set(html.match(/\/_next\/static\/[^"\s<>]+\.(?:js|css)/g) || [])];
+            assert.ok(assets.length > 0, 'No Next.js static assets found');
+            for (const asset of assets) {
+              assert.equal((await fetch(new URL(asset, origin))).status, 200, asset);
+            }
+            console.log(`Frontend page and ${assets.length} static assets passed`);
+          })().catch(error => { console.error(error); process.exitCode = 1; });
+          JS
+      - name: Save verified frontend image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        run: docker save plant-disease-frontend:ci | gzip > /tmp/frontend-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
+        with:
+          name: frontend-image
+          path: /tmp/frontend-image.tar.gz
+          compression-level: 0
+          retention-days: 1
+
   publish:
-    name: Publish image to GHCR (master only)
+    name: Publish backend and frontend to GHCR (master only)
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-    needs: [python-tests, frontend-build, image-build]
+    needs: [python-tests, frontend-build, image-build, frontend-image]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -76,3 +131,14 @@ jobs:
           tags: |
             ghcr.io/starkkk1/plant-disease-detection-api:latest
             ghcr.io/starkkk1/plant-disease-detection-api:${{ github.sha }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-image
+          path: /tmp/frontend-image
+      - name: Publish verified frontend image
+        run: |
+          docker load -i /tmp/frontend-image/frontend-image.tar.gz
+          docker tag plant-disease-frontend:ci ghcr.io/starkkk1/plant-disease-detection-frontend:latest
+          docker tag plant-disease-frontend:ci ghcr.io/starkkk1/plant-disease-detection-frontend:${{ github.sha }}
+          docker push ghcr.io/starkkk1/plant-disease-detection-frontend:latest
+          docker push ghcr.io/starkkk1/plant-disease-detection-frontend:${{ github.sha }}

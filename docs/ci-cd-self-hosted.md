@@ -4,9 +4,9 @@
 
 - Pull request vào `master`: Python tests, Next.js production build, Docker image build.
 - Push/merge vào `master`: chạy lại toàn bộ; chỉ publish image lên GitHub Container Registry (GHCR) khi các bước đều qua.
-- Image phát hành **không chứa checkpoint**. Checkpoint `.pth` vẫn nằm trên máy host và được bind mount **read-only** khi chạy.
+- Image backend phát hành **không chứa checkpoint**. Checkpoint `.pth` vẫn nằm trên máy host và được bind mount **read-only** khi chạy.
 - Máy Windows tự quyết định thời điểm pull/restart. GitHub-hosted runner **không có quyền vào máy cá nhân**, không cài self-hosted runner hay mở SSH/Docker API cho Internet.
-- Frontend Next.js tiếp tục chạy riêng trên Windows; workflow chỉ kiểm tra `npm run build`, chưa deploy Next.js.
+- Frontend có Dockerfile riêng và service trong `compose.yaml`. CI build và chạy smoke test container (healthcheck, user thường, trang và static assets), sau đó publish đúng image đã kiểm tra lên `ghcr.io/starkkk1/plant-disease-detection-frontend` với tag `latest` và commit SHA. PR chỉ kiểm tra; push vào `master` mới publish. Xem [frontend/README.md](../frontend/README.md) để chạy Docker/Compose.
 
 ## 2. Yêu cầu trước khi triển khai
 
@@ -59,4 +59,4 @@ Thay `YOUR_LAN_IP` bằng IPv4 thật. Máy host cần giữ Docker Desktop ch�
 - Image trong GHCR không có checkpoint, nên `/health` sẽ trả 503 nếu chưa mount model. Docker HEALTHCHECK cũng sẽ không pass cho đến khi mount đúng checkpoint.
 - CI dùng test weights giả lập để kiểm tra hợp đồng API; **không thay thế smoke test inference bằng checkpoint thật** trên host.
 - Workflow **chưa tự động triển khai** lên Windows. Cách này giữ máy cá nhân không phải nhận lệnh từ các PR trên GitHub. Khi đã có log, quyền truy cập và rollback ổn định, có thể tạo tác vụ Windows định kỳ pull image đã duyệt, kiểm tra canary rồi chuyển phiên bản. Không gắn self-hosted runner Docker có quyền cao với PR không tin cậy.
-- Nếu bạn muốn CI/CD cho frontend nữa, cần pipeline build và cơ chế cập nhật Next.js riêng.
+- Frontend image được publish qua CI nhưng chưa tự cập nhật container trên máy Windows. Compose hiện build frontend từ source local; việc pull image GHCR và thay phiên bản triển khai vẫn là thao tác riêng. Frontend smoke test trong CI không dùng model thật và không thay thế kiểm thử tích hợp `/predict` và `/explain` trên host.

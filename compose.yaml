@@ -1,0 +1,32 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-}
+        NEXT_PUBLIC_SEARCH_API_URL: ${NEXT_PUBLIC_SEARCH_API_URL:-}
+    image: plant-disease-frontend:local
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    restart: unless-stopped
+
+  backend:
+    image: plant-disease-api:v1.0.0
+    container_name: plant-disease-api
+
+    ports:
+      - "8000:8000"
+    
+    volumes:
+      - type: bind
+        source: ./checkpoints/mobilenetv3_small_100_distilled_best.pth
+        target: /app/checkpoints/model.pth
+        read_only: true
+
+    environment:
+      MODEL_CHECKPOINT: /app/checkpoints/model.pth
+      MODEL_NAME: mobilenetv3_small_100
+      CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000,http://192.168.2.48:3000
+
+    restart: unless-stopped
+    
