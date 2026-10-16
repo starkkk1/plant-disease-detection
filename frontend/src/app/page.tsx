@@ -2,22 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Camera, Check, ChevronRight, FlaskConical, ImagePlus, Leaf, Loader2, RotateCcw, X } from "lucide-react";
+import { Camera, ChevronRight, FlaskConical, ImagePlus, Leaf, Loader2, RotateCcw, ScanLine, X } from "lucide-react";
 import { ExplanationResult, explainImage, PredictionError, PredictionResult, realAdapter, validateFile } from "@/lib/prediction-api";
 import { mockAdapter } from "@/lib/mock-prediction";
 
 const diseaseNames: Record<string, string> = {
-  Tomato___Bacterial_spot: "Đốm vi khuẩn",
-  Tomato___Early_blight: "Bệnh cháy lá sớm",
-  Tomato___Late_blight: "Bệnh mốc sương",
-  Tomato___Leaf_Mold: "Bệnh mốc lá",
-  Tomato___Septoria_leaf_spot: "Đốm lá Septoria",
-  "Tomato___Spider_mites Two-spotted_spider_mite": "Nhện đỏ hai chấm",
-  Tomato___Target_Spot: "Bệnh đốm vòng",
-  Tomato___Tomato_Yellow_Leaf_Curl_Virus: "Virus xoăn vàng lá",
-  Tomato___Tomato_mosaic_virus: "Virus khảm cà chua",
-  Tomato___healthy: "Lá khỏe",
-  unknown: "Chưa xác định",
+  Tomato___Bacterial_spot: "Bacterial spot",
+  Tomato___Early_blight: "Early blight",
+  Tomato___Late_blight: "Late blight",
+  Tomato___Leaf_Mold: "Leaf mold",
+  Tomato___Septoria_leaf_spot: "Septoria leaf spot",
+  "Tomato___Spider_mites Two-spotted_spider_mite": "Two-spotted spider mite",
+  Tomato___Target_Spot: "Target spot",
+  Tomato___Tomato_Yellow_Leaf_Curl_Virus: "Tomato yellow leaf curl virus",
+  Tomato___Tomato_mosaic_virus: "Tomato mosaic virus",
+  Tomato___healthy: "Healthy leaf",
+  unknown: "Unknown",
 };
 
 export default function Home() {
@@ -27,6 +27,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<PredictionError | null>(null);
   const [demo, setDemo] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const [explanation, setExplanation] = useState<ExplanationResult | null>(null);
   const [explaining, setExplaining] = useState(false);
   const [explainError, setExplainError] = useState<PredictionError | null>(null);
@@ -48,6 +49,7 @@ export default function Home() {
     generation.current += 1;
     setImage(null); setResult(null); setError(null); setBusy(false);
     setExplanation(null); setExplaining(false); setExplainError(null);
+    setDragging(false);
   }
 
   function choose(file?: File) {
@@ -85,7 +87,7 @@ export default function Home() {
     try {
       const response = await explainImage(image, controller.signal, result.predictions[0].class_id);
       if (response.model_version !== result.model_version) {
-        throw new PredictionError("model_changed", "Mô hình đã thay đổi. Hãy nhận diện lại ảnh trước khi xem giải thích.");
+        throw new PredictionError("model_changed", "The model has changed. Analyze the image again before viewing its explanation.");
       }
       if (generation.current === operation) setExplanation(response);
     } catch (error) {
@@ -101,105 +103,119 @@ export default function Home() {
     <main className="leaf-app">
       <div className="leaf-shell">
         <header className="leaf-header">
-          <Link href="/" className="leaf-brand" aria-label="Lá, trang chủ"><Leaf size={22} /><span>Lá<span className="brand-dot">.</span></span></Link>
-          <span className="leaf-header-note">Dành cho lá cà chua</span>
+          <Link href="/" className="leaf-brand" aria-label="Leaf home"><Leaf size={23} strokeWidth={1.7} /><span>Leaf</span></Link>
+          <span className="leaf-header-note">Tomato leaf analysis</span>
         </header>
 
         <section className="leaf-intro">
-          <p className="leaf-eyebrow">TỪ MỘT CHIẾC LÁ</p>
-          <h1>Hiểu cây của bạn<br /><span>qua một bức ảnh.</span></h1>
-          <p>Chụp hoặc chọn ảnh lá cà chua rõ nét để nhận diện dấu hiệu bệnh.</p>
+          <h1>A closer look at your leaf.</h1>
+          <p>Upload a tomato leaf photo. Explore the signs, one image at a time.</p>
         </section>
 
         <div className="leaf-workspace">
           <section className="leaf-card" aria-labelledby="upload-title">
-            <div className="leaf-section-heading"><span className="leaf-step">01</span><h2 id="upload-title">Ảnh chiếc lá</h2></div>
-            <div className={`leaf-preview ${preview ? "has-image" : ""}`}
-                 onDragOver={(event) => event.preventDefault()}
-                 onDrop={(event) => { event.preventDefault(); if (!busy && !explaining) choose(event.dataTransfer.files[0]); }}>
+            <div className="leaf-section-heading"><h2 id="upload-title">Leaf image</h2><span>01</span></div>
+            <div className={`leaf-preview ${preview ? "has-image" : ""} ${dragging ? "is-dragging" : ""}`}
+                 onDragOver={(event) => { event.preventDefault(); if (!busy && !explaining) setDragging(true); }}
+                 onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragging(false); }}
+                 onDrop={(event) => { event.preventDefault(); setDragging(false); if (!busy && !explaining) choose(event.dataTransfer.files[0]); }}>
               {preview ? (
                 <>
                   {/* Blob URLs are local previews, not optimized remote images. */}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={preview} alt="Ảnh lá đã chọn" />
-                  <button className="leaf-remove" onClick={reset} aria-label={busy ? "Huỷ và bỏ ảnh" : "Bỏ ảnh"}><X size={18} /></button>
-                  <span className="leaf-image-label"><Check size={13} />Ảnh đã sẵn sàng</span>
+                  <img src={preview} alt="Selected leaf" />
+                  <button className="leaf-remove" onClick={reset} aria-label={busy || explaining ? "Cancel and remove image" : "Remove image"}><X size={18} /></button>
                 </>
               ) : (
-                <div className="leaf-empty-preview"><div className="leaf-icon-ring"><Leaf size={42} strokeWidth={1.3} /></div>
-                  <p>Thêm một chiếc lá</p><span>Chụp gần, đủ sáng và thấy rõ bề mặt lá.</span></div>
+                <div className="leaf-empty-preview"><div className="leaf-icon-ring"><ImagePlus size={29} strokeWidth={1.4} /></div>
+                  <p>Drop your leaf photo here</p><span>Use a clear, well-lit photo of a single leaf.</span></div>
               )}
             </div>
 
-            <input ref={gallery} aria-label="Chọn ảnh lá" type="file" accept="image/jpeg,image/png" className="sr-only" disabled={busy || explaining}
+            <input ref={gallery} aria-label="Choose leaf image" type="file" accept="image/jpeg,image/png" className="sr-only" disabled={busy || explaining}
               onChange={(event) => { choose(event.target.files?.[0]); event.target.value = ""; }} />
-            <input ref={camera} aria-label="Chụp ảnh lá" type="file" accept="image/jpeg,image/png" capture="environment" className="sr-only" disabled={busy || explaining}
+            <input ref={camera} aria-label="Take leaf photo" type="file" accept="image/jpeg,image/png" capture="environment" className="sr-only" disabled={busy || explaining}
               onChange={(event) => { choose(event.target.files?.[0]); event.target.value = ""; }} />
             <div className="leaf-upload-actions">
-              <button onClick={() => camera.current?.click()} disabled={busy || explaining}><Camera size={19} />Chụp ảnh</button>
-              <button onClick={() => gallery.current?.click()} disabled={busy || explaining}><ImagePlus size={19} />Chọn ảnh</button>
+              <button onClick={() => camera.current?.click()} disabled={busy || explaining}><Camera size={19} />Take photo</button>
+              <button onClick={() => gallery.current?.click()} disabled={busy || explaining}><ImagePlus size={19} />Choose image</button>
             </div>
-            <p className="leaf-file-note">JPEG hoặc PNG · Tối đa 5 MB</p>
+            <p className="leaf-file-note">JPG or PNG · Up to 5 MB</p>
             <button className="leaf-analyze" onClick={analyze} disabled={!image || busy || explaining}>
-              {busy ? <><Loader2 className="leaf-spinner" size={19} />Đang nhận diện…</> : <>{error && image ? "Thử lại" : "Nhận diện chiếc lá"}<ChevronRight size={19} /></>}
+              {busy ? <><Loader2 className="leaf-spinner" size={19} />Analyzing…</> : <>{error && image ? "Try again" : "Analyze leaf"}<ChevronRight size={19} /></>}
             </button>
-            {busy && <button className="leaf-text-button" onClick={() => { active.current?.abort(); generation.current += 1; setBusy(false); }}>Huỷ nhận diện</button>}
+            {busy && <button className="leaf-text-button" onClick={() => { active.current?.abort(); generation.current += 1; setBusy(false); }}>Cancel analysis</button>}
           </section>
 
           <section className="leaf-card leaf-results" aria-labelledby="results-title" aria-busy={busy}>
-            <div className="leaf-section-heading"><span className="leaf-step">02</span><h2 id="results-title">Kết quả nhận diện</h2></div>
+            <div className="leaf-section-heading"><h2 id="results-title">Analysis</h2><span>02</span></div>
             <div aria-live="polite" aria-atomic="true" className="leaf-result-content">
               {busy ? (
-                <div className="leaf-result-placeholder"><div className="leaf-icon-ring"><Loader2 className="leaf-spinner" size={32} /></div><h3>Đang xem ảnh chiếc lá</h3><p>Kết quả sẽ hiển thị ngay khi xử lý xong.</p></div>
+                <div className="leaf-result-placeholder"><div className="leaf-icon-ring"><Loader2 className="leaf-spinner" size={32} /></div><h3>Looking at your leaf</h3><p>Your results will appear in a moment.</p></div>
               ) : error ? (
-                <div className="leaf-error" role="alert"><h3>Chưa thể nhận diện</h3><p>{error.message}</p>
-                  {error.requestId && <details><summary>Mã yêu cầu để hỗ trợ</summary><code>{error.requestId}</code></details>}
+                <div className="leaf-error" role="alert"><h3>Analysis unavailable</h3><p>{error.message}</p>
+                  {error.requestId && <details><summary>Support reference</summary><code>{error.requestId}</code></details>}
                 </div>
               ) : result ? (
                 <div className="leaf-result-data">
-                  {result.is_mock && <div className="leaf-demo-banner"><FlaskConical size={16} /><span>Kết quả mẫu · Không phải phân tích ảnh này</span></div>}
-                  <p className="leaf-result-caption">Dấu hiệu phù hợp nhất</p>
+                  {result.is_mock && <div className="leaf-demo-banner"><FlaskConical size={16} /><span>Sample results · Not an analysis of this image</span></div>}
+                  <p className="leaf-result-caption">Top prediction</p>
                   <h3 className="leaf-primary-label">{diseaseNames[result.predictions[0].label] || result.predictions[0].label.replace("Tomato___", "").replace(/_/g, " ")}</h3>
-                  <div className="leaf-confidence"><span>{(result.predictions[0].confidence * 100).toFixed(1)}<small>%</small></span><p>Điểm tin cậy<br />của mô hình</p></div>
+                  <div className="leaf-confidence"><span>{(result.predictions[0].confidence * 100).toFixed(1)}<small>%</small></span><p>Model confidence</p></div>
                   <div className="leaf-prediction-list">{result.predictions.map((prediction, index) => (
                     <div key={prediction.class_id} className="leaf-prediction-row"><div><span>{diseaseNames[prediction.label] || prediction.label.replace("Tomato___", "").replace(/_/g, " ")}</span><strong>{(prediction.confidence * 100).toFixed(1)}%</strong></div>
                       <div className="leaf-bar"><span style={{ width: `${prediction.confidence * 100}%` }} className={index === 0 ? "primary" : ""} /></div>
                     </div>
                   ))}</div>
-                  <p className="leaf-model-version">Phiên bản mô hình <code>{result.model_version}</code></p>
+                  <details className="leaf-model-version"><summary>Analysis details</summary><p>Model <code>{result.model_version}</code></p></details>
                   {!result.is_mock && <div className="leaf-explanation" aria-busy={explaining}>
                     <button className="leaf-text-button" onClick={explain} disabled={explaining}>
-                      {explaining ? <><Loader2 className="leaf-spinner" size={16} />Đang tạo bản đồ…</> :
-                        explainError ? "Thử lại Grad-CAM++" : "Xem giải thích Grad-CAM++"}
+                      {explaining ? <><Loader2 className="leaf-spinner" size={16} />Creating explanation…</> :
+                        explainError ? "Retry explanation" : "Explain prediction"}
                     </button>
                     {explaining && <button className="leaf-text-button" onClick={() => {
                       active.current?.abort(); generation.current += 1; setExplaining(false);
-                    }}>Huỷ giải thích</button>}
+                    }}>Cancel explanation</button>}
                     {explainError && <p role="alert" className="leaf-explain-error">{explainError.message}</p>}
-                    {explanation && <figure>
-                      {/* The API supplies a validated PNG data URL for the explanation. */}
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={`data:image/png;base64,${explanation.explanation.overlay_png_base64}`}
-                           width={explanation.explanation.width} height={explanation.explanation.height}
-                           alt="Bản đồ Grad-CAM++ trên ảnh lá" />
-                      <figcaption>Vùng đỏ/vàng có đóng góp dương cao hơn cho lớp đang xem. Đây là bản đồ của mô hình, không phải vùng bệnh đã được xác nhận.</figcaption>
-                      {!explanation.explanation.has_signal && <p>Không có tín hiệu đóng góp dương rõ ràng cho lớp này.</p>}
-                    </figure>}
                   </div>}
-                  <button className="leaf-text-button" onClick={reset}><RotateCcw size={15} />Nhận diện ảnh khác</button>
+                  <button className="leaf-text-button" onClick={reset}><RotateCcw size={15} />Analyze another leaf</button>
                 </div>
               ) : (
-                <div className="leaf-result-placeholder"><div className="leaf-icon-ring"><Leaf size={32} strokeWidth={1.4} /></div><h3>{image ? "Ảnh đã sẵn sàng" : "Chưa có ảnh chiếc lá"}</h3><p>{image ? "Bấm “Nhận diện chiếc lá” để xem kết quả." : "Chọn hoặc chụp ảnh để bắt đầu."}</p></div>
+                <div className="leaf-result-placeholder"><div className="leaf-icon-ring"><ScanLine size={29} strokeWidth={1.4} /></div><h3>{image ? "Ready to analyze" : "Your results, here"}</h3><p>{image ? "Select Analyze leaf to get started." : "Add a leaf photo to see the model’s predictions."}</p></div>
               )}
             </div>
-            <p className="leaf-result-note">Kết quả tham khảo từ hình ảnh. Đối chiếu triệu chứng thực tế trước khi đưa ra quyết định chăm sóc cây.</p>
+            <p className="leaf-result-note">Model predictions are a guide, not a diagnosis. Check the plant’s symptoms before taking action.</p>
           </section>
         </div>
 
+        {explanation && preview && <section className="leaf-card leaf-visual-explanation" aria-labelledby="explanation-title" aria-live="polite">
+          <div className="leaf-section-heading"><h2 id="explanation-title">A look behind the prediction</h2><span>Grad-CAM++</span></div>
+          <div className="leaf-comparison">
+            <figure>
+              {/* Blob URLs are local previews, not optimized remote images. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={preview} alt="Original leaf for comparison" />
+              <figcaption>Original image</figcaption>
+            </figure>
+            <figure>
+              {/* The API supplies a validated PNG data URL for the explanation. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`data:image/png;base64,${explanation.explanation.overlay_png_base64}`}
+                   width={explanation.explanation.width} height={explanation.explanation.height}
+                   alt="Grad-CAM++ overlay on the leaf" />
+              <figcaption>Model attention</figcaption>
+            </figure>
+          </div>
+          <p className="leaf-visual-note">Warm colors highlight regions that contributed to this prediction, not confirmed diseased areas.</p>
+          {!explanation.explanation.has_signal && <p className="leaf-visual-note">No clear positive contribution was found for this class.</p>}
+        </section>}
+
         <footer className="leaf-footer">
-          <label className="leaf-demo-toggle"><input type="checkbox" checked={demo} disabled={busy || explaining} onChange={(event) => { reset(); setDemo(event.target.checked); }} /><FlaskConical size={15} />Dùng kết quả mẫu để xem giao diện</label>
-          {demo && <p className="leaf-demo-note">Chế độ minh hoạ · Không gọi dịch vụ nhận diện</p>}
-          <Link href="/research">Công cụ nghiên cứu và tìm kiếm <ChevronRight size={13} /></Link>
+          <details className="leaf-preview-options">
+            <summary>Preview options{demo && <span>Sample mode on</span>}</summary>
+            <label className="leaf-demo-toggle"><input type="checkbox" checked={demo} disabled={busy || explaining} onChange={(event) => { reset(); setDemo(event.target.checked); }} />Use sample results</label>
+            {demo && <p className="leaf-demo-note">Sample mode does not analyze your image.</p>}
+          </details>
         </footer>
       </div>
     </main>

@@ -7,7 +7,7 @@ export const mockAdapter: PredictionAdapter = {
     await new Promise<void>((resolve, reject) => {
       const abort = () => {
         clearTimeout(timer);
-        reject(new PredictionError("cancelled", "Đã huỷ nhận diện."));
+        reject(new PredictionError("cancelled", "Analysis cancelled."));
       };
       const timer = setTimeout(() => { signal?.removeEventListener("abort", abort); resolve(); }, 600);
       signal?.addEventListener("abort", abort, { once: true });

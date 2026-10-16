@@ -33,18 +33,18 @@ export interface PredictionAdapter {
 }
 
 const messages: Record<string, string> = {
-  unsupported_image: "Chỉ hỗ trợ ảnh JPEG hoặc PNG. Hãy đổi định dạng ảnh rồi thử lại.",
-  invalid_image: "Không đọc được ảnh này. Hãy chọn ảnh khác.",
-  file_too_large: "Ảnh vượt quá 5 MB. Hãy chọn ảnh nhỏ hơn.",
-  request_too_large: "Ảnh vượt quá giới hạn tải lên. Hãy chọn ảnh nhỏ hơn.",
-  image_too_large: "Độ phân giải ảnh quá lớn. Hãy giảm kích thước ảnh rồi thử lại.",
-  invalid_request: "Yêu cầu chưa hợp lệ. Hãy chọn lại ảnh và thử lại.",
-  model_unavailable: "Dịch vụ nhận diện chưa sẵn sàng. Vui lòng thử lại sau.",
-  service_busy: "Dịch vụ đang bận. Vui lòng thử lại sau vài giây.",
-  prediction_timeout: "Nhận diện mất quá nhiều thời gian. Vui lòng thử lại.",
-  prediction_failed: "Chưa thể nhận diện ảnh này. Hãy thử lại hoặc chọn ảnh khác.",
-  explanation_unavailable: "Grad-CAM++ chưa sẵn sàng cho mô hình này.",
-  explanation_failed: "Chưa thể tạo bản đồ giải thích. Vui lòng thử lại.",
+  unsupported_image: "Only JPEG or PNG images are supported. Convert your image and try again.",
+  invalid_image: "This image could not be read. Choose another photo.",
+  file_too_large: "This image exceeds 5 MB. Choose a smaller photo.",
+  request_too_large: "This image exceeds the upload limit. Choose a smaller photo.",
+  image_too_large: "The image resolution is too large. Resize it and try again.",
+  invalid_request: "The request is invalid. Select your image again and retry.",
+  model_unavailable: "The analysis service is not ready. Please try again later.",
+  service_busy: "The service is busy. Try again in a few seconds.",
+  prediction_timeout: "Analysis took too long. Please try again.",
+  prediction_failed: "This image could not be analyzed. Try again or choose another photo.",
+  explanation_unavailable: "Grad-CAM++ is unavailable for this model.",
+  explanation_failed: "The explanation could not be created. Please try again.",
 };
 
 export class PredictionError extends Error {
@@ -107,21 +107,21 @@ async function requestImage<T>(file: File, endpoint: string, parse: (data: unkno
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         const code = data?.error?.code || "http_error";
-        throw new PredictionError(code, messages[code] || "Dịch vụ gặp lỗi. Vui lòng thử lại sau.",
+        throw new PredictionError(code, messages[code] || "The service encountered an error. Please try again later.",
                                   data?.request_id || response.headers.get("X-Request-ID") || undefined);
       }
       if (endpoint === "predict" && data?.model_status && Array.isArray(data.predictions) &&
           data.predictions.some((prediction: Record<string, unknown> | null) => prediction && "class_name" in prediction)) {
         throw new PredictionError("api_version_mismatch",
-          "Dịch vụ đang dùng phiên bản API cũ. Cần cập nhật dịch vụ nhận diện.");
+          "The service is using an outdated API version. The analysis service needs an update.");
       }
       try { return parse(data); }
-      catch { throw new PredictionError("invalid_response", "Dịch vụ trả về kết quả chưa hợp lệ. Vui lòng thử lại."); }
+      catch { throw new PredictionError("invalid_response", "The service returned an invalid result. Please try again."); }
     } catch (error) {
       if (error instanceof PredictionError) throw error;
       if (timedOut) throw new PredictionError("prediction_timeout", messages.prediction_timeout);
-      if (signal?.aborted) throw new PredictionError("cancelled", "Đã huỷ nhận diện.");
-      throw new PredictionError("api_unavailable", "Không kết nối được dịch vụ nhận diện. Hãy kiểm tra kết nối và thử lại.");
+      if (signal?.aborted) throw new PredictionError("cancelled", "Analysis cancelled.");
+      throw new PredictionError("api_unavailable", "Cannot connect to the analysis service. Check your connection and try again.");
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);

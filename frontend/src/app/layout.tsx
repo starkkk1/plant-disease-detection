@@ -14,11 +14,11 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Lá · Nhận diện lá cà chua",
-  description: "Chụp hoặc chọn ảnh lá cà chua để xem kết quả nhận diện bệnh.",
+  title: "Leaf | Tomato leaf analysis",
+  description: "Explore tomato leaf disease predictions from a photo.",
 };
 
-export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#071c17" };
+export const viewport: Viewport = { width: "device-width", initialScale: 1, themeColor: "#f6f7f4" };
 
 export default function RootLayout({
   children,
@@ -26,7 +26,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >

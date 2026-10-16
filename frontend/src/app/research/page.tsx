@@ -67,7 +67,7 @@ export default function Home() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.detail || "Đã có lỗi xảy ra");
+        throw new Error(errData.detail || "The request failed. Please try again.");
       }
 
       const data = await res.json();
@@ -89,7 +89,7 @@ export default function Home() {
 
     const formData = new FormData();
     formData.append("file", image);
-    formData.append("limit", "4"); // Lấy top 4 ảnh giống nhất
+    formData.append("limit", "4"); // Retrieve the four closest images
 
     try {
       const res = await fetch(`${searchBaseUrl()}/search/image`, {
@@ -99,7 +99,7 @@ export default function Home() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.detail || "Đã có lỗi xảy ra");
+        throw new Error(errData.detail || "The request failed. Please try again.");
       }
 
       const data = await res.json();
@@ -130,7 +130,7 @@ export default function Home() {
           Tomato Leaf Doctor
         </h1>
         <p className="text-slate-400 text-lg max-w-xl text-center">
-          Upload a photo of a tomato leaf and let our advanced AI model instantly detect any diseases with precision.
+          Upload a tomato leaf photo to explore model predictions and similar images.
         </p>
       </div>
 
@@ -276,7 +276,7 @@ export default function Home() {
                                <Info className="w-4 h-4"/> Grad-CAM++ Attention Map
                              </p>
                              <p className="text-slate-400 text-xs mt-1">
-                               Vùng màu đỏ/cam là khu vực AI tập trung nhìn vào để chẩn đoán.
+                               Warm colors highlight regions contributing to the prediction, not confirmed disease.
                              </p>
                            </div>
                         </div>
