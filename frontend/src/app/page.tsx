@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Camera, ChevronRight, FlaskConical, ImagePlus, Leaf, Loader2, RotateCcw, ScanLine, X } from "lucide-react";
 import { ExplanationResult, explainImage, PredictionError, PredictionResult, realAdapter, validateFile } from "@/lib/prediction-api";
 import { mockAdapter } from "@/lib/mock-prediction";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 const diseaseNames: Record<string, string> = {
   Tomato___Bacterial_spot: "Bacterial spot",
@@ -107,13 +108,13 @@ export default function Home() {
           <span className="leaf-header-note">Tomato leaf analysis</span>
         </header>
 
-        <section className="leaf-intro">
+        <ScrollReveal className="leaf-intro">
           <h1>A closer look at your leaf.</h1>
           <p>Upload a tomato leaf photo. Explore the signs, one image at a time.</p>
-        </section>
+        </ScrollReveal>
 
         <div className="leaf-workspace">
-          <section className="leaf-card" aria-labelledby="upload-title">
+          <ScrollReveal className="leaf-card" aria-labelledby="upload-title">
             <div className="leaf-section-heading"><h2 id="upload-title">Leaf image</h2><span>01</span></div>
             <div className={`leaf-preview ${preview ? "has-image" : ""} ${dragging ? "is-dragging" : ""}`}
                  onDragOver={(event) => { event.preventDefault(); if (!busy && !explaining) setDragging(true); }}
@@ -145,9 +146,9 @@ export default function Home() {
               {busy ? <><Loader2 className="leaf-spinner" size={19} />Analyzing…</> : <>{error && image ? "Try again" : "Analyze leaf"}<ChevronRight size={19} /></>}
             </button>
             {busy && <button className="leaf-text-button" onClick={() => { active.current?.abort(); generation.current += 1; setBusy(false); }}>Cancel analysis</button>}
-          </section>
+          </ScrollReveal>
 
-          <section className="leaf-card leaf-results" aria-labelledby="results-title" aria-busy={busy}>
+          <ScrollReveal className="leaf-card leaf-results" aria-labelledby="results-title" aria-busy={busy}>
             <div className="leaf-section-heading"><h2 id="results-title">Analysis</h2><span>02</span></div>
             <div aria-live="polite" aria-atomic="true" className="leaf-result-content">
               {busy ? (
@@ -185,10 +186,10 @@ export default function Home() {
               )}
             </div>
             <p className="leaf-result-note">Model predictions are a guide, not a diagnosis. Check the plant’s symptoms before taking action.</p>
-          </section>
+          </ScrollReveal>
         </div>
 
-        {explanation && preview && <section className="leaf-card leaf-visual-explanation" aria-labelledby="explanation-title" aria-live="polite">
+        {explanation && preview && <ScrollReveal className="leaf-card leaf-visual-explanation" aria-labelledby="explanation-title" aria-live="polite">
           <div className="leaf-section-heading"><h2 id="explanation-title">A look behind the prediction</h2><span>Grad-CAM++</span></div>
           <div className="leaf-comparison">
             <figure>
@@ -208,7 +209,7 @@ export default function Home() {
           </div>
           <p className="leaf-visual-note">Warm colors highlight regions that contributed to this prediction, not confirmed diseased areas.</p>
           {!explanation.explanation.has_signal && <p className="leaf-visual-note">No clear positive contribution was found for this class.</p>}
-        </section>}
+        </ScrollReveal>}
 
         <footer className="leaf-footer">
           <details className="leaf-preview-options">

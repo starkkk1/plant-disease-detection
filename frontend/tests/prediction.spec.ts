@@ -22,6 +22,10 @@ test("empty state, camera input, keyboard actions and no horizontal overflow", a
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
   await expect(page.locator("html")).toHaveAttribute("lang", "en");
   await expect(page.getByLabel("Use sample results")).toBeHidden();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect(page.locator("body")).toHaveCSS("background-color", "rgb(11, 16, 14)");
+  await expect(page.locator("h1")).toHaveCSS("font-family", /instrumentSerif/i);
+  await expect(page.locator("body")).toHaveCSS("font-family", /manrope/i);
   await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true, animations: "disabled" });
 });
 
@@ -39,6 +43,7 @@ test("real end-to-end prediction and Grad-CAM++ with CPU checkpoint", async ({ p
   await expect(page.getByText(result.model_version, { exact: true })).toBeVisible();
   await expect(page.getByText("Sample results · Not an analysis of this image")).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.screenshot({ path: testInfo.outputPath("prediction.png"), fullPage: true, animations: "disabled" });
   const explained = page.waitForResponse((res) => res.url().endsWith("/explain") && res.request().method() === "POST");
   await page.getByRole("button", { name: "Explain prediction", exact: true }).click();
@@ -203,6 +208,7 @@ test("keyboard upload, balanced cards and reduced motion", async ({ page }, test
   await chooseButton.press("Enter");
   await (await chooser).setFiles(fixture);
   await expect(page.getByAltText("Selected leaf")).toBeVisible();
+  await page.emulateMedia({ reducedMotion: "reduce" });
   const cards = await page.locator(".leaf-card").evaluateAll((elements) => elements.map((element) => {
     const { x, y, width, height } = element.getBoundingClientRect();
     return { x, y, width, height };
@@ -214,7 +220,6 @@ test("keyboard upload, balanced cards and reduced motion", async ({ page }, test
   } else {
     expect(cards[1].y).toBeGreaterThan(cards[0].y + cards[0].height);
   }
-  await page.emulateMedia({ reducedMotion: "reduce" });
   const analyzeButton = page.getByRole("button", { name: "Analyze leaf", exact: true });
   await expect(analyzeButton).toHaveCSS("transition-duration", "0s");
   await analyzeButton.click();
@@ -231,4 +236,21 @@ test("narrow screen and long disease names stay within the workspace", async ({ 
   await page.getByRole("button", { name: "Analyze leaf", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Tomato yellow leaf curl virus", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy();
+});
+
+test("cards reveal on scroll once and remain readable with reduced motion", async ({ page }) => {
+  await page.setViewportSize({ width: 393, height: 600 });
+  await page.reload();
+  const results = page.locator(".leaf-results");
+  await expect(results).toHaveAttribute("data-reveal", "pending");
+  await results.scrollIntoViewIfNeeded();
+  await expect(results).toHaveAttribute("data-reveal", "visible");
+  await expect(results).toHaveCSS("opacity", "1");
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect(results).toHaveAttribute("data-reveal", "visible");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.reload();
+  await expect(results).toHaveCSS("opacity", "1");
+  await expect(results).toHaveCSS("transform", "none");
+  await expect(results).toHaveCSS("transition-duration", "0s");
 });

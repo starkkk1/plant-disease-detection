@@ -69,7 +69,7 @@ frontend code changes so the image and container are updated.
 
 Responsive, English-language Next.js frontend for the standalone classification API. The main route `/` supports camera/gallery JPEG/PNG selection, drag-and-drop, preview, processing/cancellation/retry and ranked results. Model identity is available under **Analysis details**. Explicitly labeled demo results are opt-in under **Preview options → Use sample results**. The research/search UI remains available directly at `/research`.
 
-Real predictions offer **Explain prediction**, calling `/explain` with the selected image and predicted class. A separate comparison panel shows the original image beside its Grad-CAM++ overlay. Explanation loading/cancel/error/retry states preserve the classification result. Mock mode does not fabricate explanations. Button transitions and result animations respect the device's reduced-motion preference. See [explain.md](../docs/explain.md).
+Real predictions offer **Explain prediction**, calling `/explain` with the selected image and predicted class. A separate comparison panel shows the original image beside its Grad-CAM++ overlay. Explanation loading/cancel/error/retry states preserve the classification result. Mock mode does not fabricate explanations. The dark theme uses self-hosted Manrope and Instrument Serif fonts, with their licenses in `src/app/fonts`. Cards reveal once as they enter the viewport; keyboard focus, unsupported browsers and reduced-motion preferences keep content readable. Button transitions and result animations also respect reduced motion. See [explain.md](../docs/explain.md).
 
 ```powershell
 npm ci
