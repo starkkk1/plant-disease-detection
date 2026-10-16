@@ -109,7 +109,7 @@ export default function Home() {
         </header>
 
         <ScrollReveal className="leaf-intro">
-          <h1>A closer look at your leaf.</h1>
+          <h1>A CLOSER LOOK AT YOUR LEAF</h1>
           <p>Upload a tomato leaf photo. Explore the signs, one image at a time.</p>
         </ScrollReveal>
 
