@@ -8,6 +8,12 @@ const manrope = localFont({
   weight: "200 800",
   display: "swap",
 });
+const lora = localFont({
+  src: "./fonts/Lora-Variable.ttf",
+  variable: "--font-lora",
+  weight: "400 700",
+  display: "swap",
+});
 const instrumentSerif = localFont({
   src: "./fonts/InstrumentSerif-Regular.ttf",
   variable: "--font-instrument-serif",
@@ -35,7 +41,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${manrope.variable} ${instrumentSerif.variable} ${geistMono.variable} antialiased`}
+        className={`${manrope.variable} ${lora.variable} ${instrumentSerif.variable} ${geistMono.variable} antialiased`}
       >
         {children}
       </body>

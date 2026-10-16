@@ -19,7 +19,7 @@ button:active:not(:disabled) { transform: scale(.98); }
 .leaf-brand svg { color: var(--leaf-green); }
 .leaf-header-note { color: var(--leaf-muted); font-size: 12px; }
 .leaf-intro { text-align: center; padding: 44px 0 34px; }
-.leaf-intro h1 { font-family: var(--font-instrument-serif), Georgia, serif; font-size: clamp(42px, 6.2vw, 68px); line-height: 1.08; letter-spacing: -1.4px; font-weight: 400; text-wrap: balance; }
+.leaf-intro h1 { font-family: var(--font-lora), Georgia, serif; font-size: clamp(38px, 5.4vw, 62px); line-height: 1.22; letter-spacing: .012em; font-weight: 400; text-wrap: balance; max-width: 960px; margin-inline: auto; }
 .leaf-intro > p { color: var(--leaf-muted); font-size: 14px; line-height: 1.7; margin: 14px auto 0; max-width: 430px; text-wrap: balance; }
 .leaf-workspace { display: grid; gap: 18px; align-items: stretch; }
 .leaf-card { min-width: 0; padding: 24px; background: #121a16; border: 1px solid var(--leaf-line); border-radius: 20px; box-shadow: 0 3px 18px #00000018; }

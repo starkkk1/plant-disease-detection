@@ -24,7 +24,7 @@ test("empty state, camera input, keyboard actions and no horizontal overflow", a
   await expect(page.getByLabel("Use sample results")).toBeHidden();
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator("body")).toHaveCSS("background-color", "rgb(11, 16, 14)");
-  await expect(page.locator("h1")).toHaveCSS("font-family", /instrumentSerif/i);
+  await expect(page.locator("h1")).toHaveCSS("font-family", /lora/i);
   await expect(page.locator("body")).toHaveCSS("font-family", /manrope/i);
   await page.screenshot({ path: testInfo.outputPath("empty.png"), fullPage: true, animations: "disabled" });
 });
