@@ -293,7 +293,9 @@ Useful AWS references: [EC2 stop/start](https://docs.aws.amazon.com/AWSEC2/lates
 
 The domain setup targets `https://caycachua.id.vn`. It requires a working public DNS A record to the EC2 public IPv4 and inbound TCP 80/443. These are separate from the existing HTTP demo on port 3000. Keep the IP demo available until browser prediction and Grad-CAM++ pass on HTTPS.
 
-At the DNS provider, create the root A record (`@`) pointing to the current EC2 public IPv4. Leave unrelated mail/TXT records intact. Confirm the authoritative nameservers return the correct address; a saved record or SERVFAIL is not proof of propagation. If EC2 public IPv4 changes after stop/start, update this A record before using the domain again.
+At the DNS provider, create the root A record (`@`) pointing to the current EC2 public IPv4. Leave unrelated mail/TXT records intact. With iNET OneShield protection enabled, public DNS returns proxy addresses rather than the EC2 address; verify the origin A value inside iNET instead. A saved record or SERVFAIL is not proof of propagation. If EC2 public IPv4 changes after stop/start, update this A record before using the domain again.
+
+This Caddyfile is intended for OneShield: it serves both HTTP and HTTPS without redirecting at the origin. Enable the visitor HTTP-to-HTTPS redirect in OneShield after its edge certificate is active. Check the current SSL/TLS mode before changing it. Flexible encrypts only browser-to-edge traffic; the target is Full (Strict), which also validates the origin certificate. Select Full (Strict) only after Caddy has obtained a valid certificate and a direct origin TLS check passes. Allow ACME HTTP validation requests through the proxy; a protection challenge on that path can prevent certificate issuance/renewal. Do not disable certificate validation to hide an origin TLS failure. See [iNET SSL/TLS settings](https://developers.inet.vn/docs/oneportal/oneshield-ssl-tls).
 
 The frontend defaults to `https://PAGE_HOST/api` on HTTPS, while existing HTTP demos retain API port 8000. `deploy/Caddyfile` terminates TLS, forwards `/` to `127.0.0.1:3000` and strips `/api` before forwarding requests to `127.0.0.1:8000`. Browser calls stay on the same origin, so the HTTPS path does not need cross-origin CORS permission. Explicit `NEXT_PUBLIC_API_URL` build settings still take precedence.
 
@@ -325,11 +327,13 @@ sudo docker run -d --name plant-disease-proxy \
   "$CADDY_IMAGE"
 ```
 
-Caddy requests and renews the public certificate automatically once DNS and network access are correct. Keep its data volume: it contains certificate/account keys and is not a Git artifact. If the proxy container already exists, inspect it before running the creation command again. To reload a changed Caddyfile, use `sudo docker exec plant-disease-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+Caddy requests and renews the origin certificate automatically once DNS, network access and ACME validation through OneShield are working. A healthy edge certificate does not prove the origin has a valid certificate. Keep its data volume: it contains certificate/account keys and is not a Git artifact. If the proxy container already exists, inspect it before running the creation command again. To reload a changed Caddyfile, use `sudo docker exec plant-disease-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
 
 ```bash
 curl --fail https://caycachua.id.vn/api/health
 curl -I http://caycachua.id.vn
+# Check the origin certificate directly, bypassing OneShield DNS (use current EC2 IP).
+curl --fail --resolve caycachua.id.vn:443:13.239.243.241 https://caycachua.id.vn/api/health
 ```
 
 Check the browser at `https://caycachua.id.vn`: upload a real image, analyze it and request the explanation. There must be no mixed-content/CORS errors and no connection to port 8000 from the browser. After these checks pass, remove public inbound access to ports 3000/8000 from the Security Group; the local proxy can still reach those host ports. Keep SSH restricted to the operator's source IP. Keep TCP 80/443 accessible for normal HTTPS operation and certificate renewal.

@@ -1,5 +1,11 @@
-# EC2 host-network container; APP_DOMAIN is the verified application hostname.
-{$APP_DOMAIN} {
+# OneShield handles the visitor's HTTP-to-HTTPS redirect at the edge.
+# Keep HTTP available at the origin for proxy compatibility and ACME validation.
+{
+	auto_https disable_redirects
+}
+
+# APP_DOMAIN must be a bare hostname, without a scheme or port.
+http://{$APP_DOMAIN}, https://{$APP_DOMAIN} {
 	encode gzip
 
 	handle_path /api/* {
