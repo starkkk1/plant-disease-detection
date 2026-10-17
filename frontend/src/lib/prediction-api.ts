@@ -62,16 +62,21 @@ export function validateFile(file: File): void {
   if (file.size > MAX_UPLOAD_BYTES) throw new PredictionError("file_too_large", messages.file_too_large);
 }
 
-export function apiBaseUrl(): string {
-  // Local default follows the page hostname, so a phone does not call its own localhost.
-  const configured = process.env.NEXT_PUBLIC_API_URL;
+export function resolveApiBaseUrl(pageOrigin: string, configured?: string): string {
   if (configured) return configured.replace(/\/+$/, "");
-  if (typeof window !== "undefined") {
-    const url = new URL(window.location.origin);
-    url.port = "8000";
-    return url.origin;
-  }
-  return "http://localhost:8000";
+  const url = new URL(pageOrigin);
+  // HTTPS deployments proxy /api to FastAPI on the same origin.
+  if (url.protocol === "https:") return `${url.origin}/api`;
+  // HTTP development and the existing IP demo retain the direct API port.
+  url.port = "8000";
+  return url.origin;
+}
+
+export function apiBaseUrl(): string {
+  return resolveApiBaseUrl(
+    typeof window !== "undefined" ? window.location.origin : "http://localhost:3000",
+    process.env.NEXT_PUBLIC_API_URL,
+  );
 }
 
 function parseResult(data: unknown): PredictionResult {

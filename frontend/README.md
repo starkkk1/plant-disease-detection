@@ -78,7 +78,7 @@ npm run dev -- --hostname 0.0.0.0 --port 3000
 
 Run the backend in another terminal using the ML environment. From `frontend/`, run `python ../scripts/run_api.py --host 0.0.0.0 --port 8000`; the launcher resolves the backend's project directory automatically. Use the verified ML Python environment and real checkpoint as described in [RUN_GUIDE.md](../RUN_GUIDE.md).
 
-The API origin is `NEXT_PUBLIC_API_URL`, which can be placed in `.env.local`. If unset, local demos follow the page hostname at port 8000, including LAN phone demos. For a hosted deployment, set the actual HTTPS API origin at build time and allow the frontend origin in backend `CORS_ORIGINS`. No AWS credentials or secrets belong in public frontend variables. `NEXT_PUBLIC_SEARCH_API_URL` is optional for the separate local research search service on port 8001.
+The API URL is `NEXT_PUBLIC_API_URL`, which can be placed in `.env.local` and overrides the default at build time. If unset, HTTP demos follow the page hostname at port 8000, including LAN phone demos. HTTPS pages use the same origin under `/api`; the EC2 reverse proxy must strip `/api` before forwarding to FastAPI. This keeps uploads and explanations on HTTPS without a separate browser-facing API port. A separate API origin still needs matching backend `CORS_ORIGINS`. No AWS credentials or secrets belong in public frontend variables. `NEXT_PUBLIC_SEARCH_API_URL` is optional for the separate local research search service on port 8001.
 
 ```powershell
 npm run build

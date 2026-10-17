@@ -289,6 +289,53 @@ To validate notification once, temporarily set the RAM threshold to 0, wait for 
 
 Useful AWS references: [EC2 stop/start](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/Stop_Start.html), [S3 HeadObject permissions](https://docs.aws.amazon.com/AmazonS3/latest/API/API_HeadObject.html), [CloudWatch Agent](https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Install-CloudWatch-Agent.html).
 
+## Domain and HTTPS on EC2
+
+The domain setup targets `https://caycachua.id.vn`. It requires a working public DNS A record to the EC2 public IPv4 and inbound TCP 80/443. These are separate from the existing HTTP demo on port 3000. Keep the IP demo available until browser prediction and Grad-CAM++ pass on HTTPS.
+
+At the DNS provider, create the root A record (`@`) pointing to the current EC2 public IPv4. Leave unrelated mail/TXT records intact. Confirm the authoritative nameservers return the correct address; a saved record or SERVFAIL is not proof of propagation. If EC2 public IPv4 changes after stop/start, update this A record before using the domain again.
+
+The frontend defaults to `https://PAGE_HOST/api` on HTTPS, while existing HTTP demos retain API port 8000. `deploy/Caddyfile` terminates TLS, forwards `/` to `127.0.0.1:3000` and strips `/api` before forwarding requests to `127.0.0.1:8000`. Browser calls stay on the same origin, so the HTTPS path does not need cross-origin CORS permission. Explicit `NEXT_PUBLIC_API_URL` build settings still take precedence.
+
+The following commands run in **EC2 SSH**, after DNS and ports have been verified and the HTTPS-capable frontend image has been deployed. This recipe uses Linux host networking and the existing host-published frontend/API ports. Port 80/443 must not already belong to another service.
+
+```bash
+cd ~/plant-disease-detection
+export APP_DOMAIN=caycachua.id.vn
+# Official Caddy 2 image digest verified during setup; upgrade intentionally.
+export CADDY_IMAGE='caddy@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f'
+sudo docker pull "$CADDY_IMAGE"
+sudo docker run --rm --network none \
+  -e "APP_DOMAIN=$APP_DOMAIN" \
+  --mount "type=bind,source=$PWD/deploy/Caddyfile,target=/etc/caddy/Caddyfile,readonly" \
+  "$CADDY_IMAGE" caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+
+sudo docker volume create plant-disease-caddy-data
+sudo docker volume create plant-disease-caddy-config
+sudo docker run -d --name plant-disease-proxy \
+  --restart unless-stopped --network host \
+  -e "APP_DOMAIN=$APP_DOMAIN" \
+  --mount "type=bind,source=$PWD/deploy/Caddyfile,target=/etc/caddy/Caddyfile,readonly" \
+  --mount type=volume,source=plant-disease-caddy-data,target=/data \
+  --mount type=volume,source=plant-disease-caddy-config,target=/config \
+  --log-driver awslogs \
+  --log-opt awslogs-region=ap-southeast-2 \
+  --log-opt awslogs-group=/plant-disease/frontend \
+  --log-opt awslogs-stream=plant-disease-proxy \
+  "$CADDY_IMAGE"
+```
+
+Caddy requests and renews the public certificate automatically once DNS and network access are correct. Keep its data volume: it contains certificate/account keys and is not a Git artifact. If the proxy container already exists, inspect it before running the creation command again. To reload a changed Caddyfile, use `sudo docker exec plant-disease-proxy caddy reload --config /etc/caddy/Caddyfile --adapter caddyfile`.
+
+```bash
+curl --fail https://caycachua.id.vn/api/health
+curl -I http://caycachua.id.vn
+```
+
+Check the browser at `https://caycachua.id.vn`: upload a real image, analyze it and request the explanation. There must be no mixed-content/CORS errors and no connection to port 8000 from the browser. After these checks pass, remove public inbound access to ports 3000/8000 from the Security Group; the local proxy can still reach those host ports. Keep SSH restricted to the operator's source IP. Keep TCP 80/443 accessible for normal HTTPS operation and certificate renewal.
+
+To stop/start the proxy use `sudo docker stop plant-disease-proxy` / `sudo docker start plant-disease-proxy`. Stopping it makes the domain unavailable while the frontend/API containers can remain running. This setup uses the same EC2 instance and the existing DNS provider; no Route 53 or load balancer is required.
+
 ## Local Docker Compose
 
 The current local `compose.yaml` builds `frontend/Dockerfile` and references backend image **`plant-disease-api:v1.0.0`**. Build that image first if it is absent. The root `Dockerfile` includes the local distilled checkpoint; `Dockerfile.deploy` is the separate checkpoint-free GHCR recipe.
